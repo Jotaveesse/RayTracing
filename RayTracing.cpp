@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <list>
 using namespace std;
 
 class Vector{
@@ -65,6 +66,15 @@ class Vector{
             x * vec.y - y * vec.x);
         }
 
+        Vector operator + (const Vector &v) const
+        {return Vector(x + v.x, y + v.y, z + v.z);}
+
+        Vector operator - (const Vector &v) const
+        {return Vector(x - v.x, y - v.y, z - v.z);}
+
+        Vector operator * (const float &n) const
+        {return Vector(x * n, y * n, z * n);}
+
         const float operator [] (uint8_t i) const { return (&x)[i]; }
         float& operator [] (uint8_t i) { return (&x)[i]; }
 
@@ -129,22 +139,123 @@ class Camera{
         int height;
         int width;
 
-        Camera(int height, int width, float distScreen, Vector up, Point center, Point target){
-            height = height;
-            width = width;
-            distScreen = distScreen;
-            up = up;
-            center = center;
-            target = target;
+        Camera(int inHeight, int inWidth, float inDistScreen, Vector inUp, Point inCenter, Point inTarget){
+            height = inHeight;
+            width = inWidth;
+            distScreen = inDistScreen;
+            up = inUp;
+            center = inCenter;
+            target = inTarget;
 
-            orthoW = (target - center);
-            cout << "Criando camera";
+            orthoU = (target - center).normalize();
+            orthoV = orthoU.cross(up).normalize();
+            orthoW = orthoU.cross(orthoV);
+        }
+};
+
+class Color{
+    public:
+        int R, G, B;
+        
+        Color(int ColorR, int ColorG, int ColorB){
+            R = ColorR;
+            G = ColorG;
+            B = ColorB;
+            cout << "uhh";
+        }
+
+        Color(){
+            R = 0;
+            G = 0;
+            B = 0;
+        }
+
+        Color normalized(){
+            float invLen = 1/255;
+
+            return Color(R * invLen, G * invLen, B * invLen);
+        }
+
+        const int operator [] (uint8_t i) const {
+                if (i <= 2)
+                    return (&R)[i];
+                else
+                    __throw_out_of_range;
+            }
+        int& operator [] (uint8_t i) { 
+            if (i <= 2)
+                return (&R)[i];
+            else
+                __throw_out_of_range;
+            return (&R)[0];
+        }
+};
+
+class Light{
+    public:
+        Point center;
+        Color color;
+
+        Light(Point center, Color color){
+            color = color;
+            center = center;
+        }
+};
+
+class Scene{
+    public:
+        Color ambient;
+        list<Light> lights = {};
+        Scene(Color ambient, list<Light> lights){
+            ambient = ambient;
+            lights= lights;
+        }
+};
+
+class Sphere{
+    public:
+        Point center;
+        float radius;
+        Color color;
+
+        Sphere(Point inCenter, float inRadius, Color inColor){
+            center = inCenter;
+            radius = inRadius;
+            color = inColor.normalized();
+        }
+};
+
+class Plane{
+    public:
+        Point point;
+        Vector vector;
+        Color color;
+
+        Plane(Point inPoint, Vector inVector, Color inColor){
+            point = inPoint;
+            vector = inVector;
+            color = inColor.normalized();
+        }
+};
+
+class Mesh{
+    public:
+        int triCount;
+        int vertCount;
+        list<Point> vertices;
+        list<tuple<int, int, int>> triangles;
+        list<Vector> triNormals;
+        list<Vector> vertNormals;
+
+        Color color;
+        Mesh(){
+
         }
 };
 
 int main() {
-    Vector vec(1,5,3);
-    vec.normalized();
-    cout << vec;
+    Camera cam(10,10,10,Vector(0,2,0),Point(0,0,0),Point(10,0,0));
+    Color c(123,4,12);
+    cout << c[2];
     return 0;
 };
