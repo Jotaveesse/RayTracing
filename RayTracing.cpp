@@ -1,6 +1,10 @@
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <list>
+#include <vector>
+#include <sstream>  
+
 using namespace std;
 
 class Vector{
@@ -155,13 +159,12 @@ class Camera{
 
 class Color{
     public:
-        int R, G, B;
+        float R, G, B;
         
-        Color(int ColorR, int ColorG, int ColorB){
+        Color(float ColorR, float ColorG, float ColorB){
             R = ColorR;
             G = ColorG;
             B = ColorB;
-            cout << "uhh";
         }
 
         Color(){
@@ -170,19 +173,21 @@ class Color{
             B = 0;
         }
 
-        Color normalized(){
-            float invLen = 1/255;
+        void normalize(){
+            float invLen = 1.0f/255.0f;
 
-            return Color(R * invLen, G * invLen, B * invLen);
+            R *= invLen;
+            G *= invLen;
+            B *= invLen;
         }
 
-        const int operator [] (uint8_t i) const {
+        const float operator [] (uint8_t i) const {
                 if (i <= 2)
                     return (&R)[i];
                 else
                     __throw_out_of_range;
             }
-        int& operator [] (uint8_t i) { 
+        float& operator [] (uint8_t i) { 
             if (i <= 2)
                 return (&R)[i];
             else
@@ -221,7 +226,7 @@ class Sphere{
         Sphere(Point inCenter, float inRadius, Color inColor){
             center = inCenter;
             radius = inRadius;
-            color = inColor.normalized();
+            color = inColor;
         }
 };
 
@@ -234,7 +239,7 @@ class Plane{
         Plane(Point inPoint, Vector inVector, Color inColor){
             point = inPoint;
             vector = inVector;
-            color = inColor.normalized();
+            color = inColor;
         }
 };
 
@@ -243,7 +248,7 @@ class Mesh{
         int triCount;
         int vertCount;
         list<Point> vertices;
-        list<tuple<int, int, int>> triangles;
+        list<int> triangles;
         list<Vector> triNormals;
         list<Vector> vertNormals;
 
@@ -256,6 +261,41 @@ class Mesh{
 int main() {
     Camera cam(10,10,10,Vector(0,2,0),Point(0,0,0),Point(10,0,0));
     Color c(123,4,12);
-    cout << c[2];
+
+    string data;
+    vector<string> dataList;
+    string line;
+    ifstream inputFile("input.txt");
+
+    while (getline(inputFile, line)) {
+        dataList.clear();
+        stringstream streamLine(line);
+
+        while (getline(streamLine, data, ' ')) {
+            //cout << data << endl;
+            dataList.push_back(data);
+        }
+
+        if(dataList[0] == "s"){
+            Point center(stoi(dataList[1]),
+                stoi(dataList[2]),
+                stoi(dataList[3]));
+            
+            float radius = stoi(dataList[4]);
+
+            Color col(stoi(dataList[5]),
+                stoi(dataList[6]),
+                stoi(dataList[7]));
+            
+            col.normalize();
+            Sphere sph(center, radius, col);
+            cout << sph.color.R << endl;
+        }
+
+            
+    }
+
+    inputFile.close();
+
     return 0;
 };
