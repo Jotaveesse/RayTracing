@@ -3,7 +3,8 @@
 #include <cmath>
 #include <list>
 #include <vector>
-#include <sstream>  
+#include <sstream>
+#include <tuple>
 
 using namespace std;
 
@@ -143,13 +144,14 @@ class Camera{
         int height;
         int width;
 
-        Camera(int inHeight, int inWidth, float inDistScreen, Vector inUp, Point inCenter, Point inTarget){
-            height = inHeight;
-            width = inWidth;
-            distScreen = inDistScreen;
-            up = inUp;
-            center = inCenter;
-            target = inTarget;
+        Camera(int height, int width, float distScreen, Vector up,
+        Point center, Point target){
+            this->height = height;
+            this->width = width;
+            this->distScreen = distScreen;
+            this->up = up;
+            this->center = center;
+            this->target = target;
 
             orthoU = (target - center).normalize();
             orthoV = orthoU.cross(up).normalize();
@@ -161,10 +163,10 @@ class Color{
     public:
         float R, G, B;
         
-        Color(float ColorR, float ColorG, float ColorB){
-            R = ColorR;
-            G = ColorG;
-            B = ColorB;
+        Color(float R, float G, float B){
+            this->R = R;
+            this->G = G;
+            this->B = B;
         }
 
         Color(){
@@ -202,18 +204,18 @@ class Light{
         Color color;
 
         Light(Point center, Color color){
-            color = color;
-            center = center;
+            this->color = color;
+            this->center = center;
         }
 };
 
 class Scene{
     public:
         Color ambient;
-        list<Light> lights = {};
-        Scene(Color ambient, list<Light> lights){
-            ambient = ambient;
-            lights= lights;
+        vector<Light> lights = {};
+        Scene(Color ambient, vector<Light> lights){
+            this->ambient = ambient;
+            this->lights = lights;
         }
 };
 
@@ -222,11 +224,24 @@ class Sphere{
         Point center;
         float radius;
         Color color;
+        float difCo;
+        float espCo;
+        float ambCo;
+        float refCo;
+        float tranCo;
+        float rugCo;
 
-        Sphere(Point inCenter, float inRadius, Color inColor){
-            center = inCenter;
-            radius = inRadius;
-            color = inColor;
+        Sphere(Point center, float radius, Color color, float difCo,
+        float espCo, float ambCo, float refCo, float tranCo, float rugCo){
+            this->center = center;
+            this->radius = radius;
+            this->color = color;
+            this->difCo = difCo;
+            this->espCo = espCo;
+            this->ambCo = ambCo;
+            this->refCo = refCo;
+            this->tranCo = tranCo;
+            this->rugCo = rugCo;
         }
 };
 
@@ -235,11 +250,24 @@ class Plane{
         Point point;
         Vector vector;
         Color color;
+        float difCo;
+        float espCo;
+        float ambCo;
+        float refCo;
+        float tranCo;
+        float rugCo;
 
-        Plane(Point inPoint, Vector inVector, Color inColor){
-            point = inPoint;
-            vector = inVector;
-            color = inColor;
+        Plane(Point point, Vector vector, Color color, float difCo,
+        float espCo, float ambCo, float refCo, float tranCo, float rugCo){
+            this->point = point;
+            this->vector = vector;
+            this->color = color;
+            this->difCo = difCo;
+            this->espCo = espCo;
+            this->ambCo = ambCo;
+            this->refCo = refCo;
+            this->tranCo = tranCo;
+            this->rugCo = rugCo;
         }
 };
 
@@ -247,20 +275,43 @@ class Mesh{
     public:
         int triCount;
         int vertCount;
-        list<Point> vertices;
-        list<int> triangles;
-        list<Vector> triNormals;
-        list<Vector> vertNormals;
-
+        vector<Point> vertices;
+        vector<tuple<int, int, int>> triangles;
+        vector<Vector> triNormals;
+        vector<Vector> vertNormals;
         Color color;
-        Mesh(){
+        float difCo;
+        float espCo;
+        float ambCo;
+        float refCo;
+        float tranCo;
+        float rugCo;
 
+        Mesh(int triCount, int vertCount, vector<Point> vertices,
+        vector<tuple<int, int, int>> triangles, Color color, float difCo, float espCo,
+        float ambCo, float refCo, float tranCo, float rugCo){
+            this->triCount = triCount;
+            this->vertCount = vertCount;
+            this->vertices = vertices;
+            this->triangles = triangles;
+            this->color = color;
+            this->difCo = difCo;
+            this->espCo = espCo;
+            this->ambCo = ambCo;
+            this->refCo = refCo;
+            this->tranCo = tranCo;
+            this->rugCo = rugCo;
         }
 };
 
 int main() {
-    Camera cam(10,10,10,Vector(0,2,0),Point(0,0,0),Point(10,0,0));
-    Color c(123,4,12);
+    vector<Sphere> sphereList;
+    vector<Plane> planeList;
+    vector<Mesh> meshList;
+    vector<Light> lightList;
+
+    Camera *globalCam;
+    Scene *globalScene;
 
     string data;
     vector<string> dataList;
@@ -277,19 +328,154 @@ int main() {
         }
 
         if(dataList[0] == "s"){
-            Point center(stoi(dataList[1]),
-                stoi(dataList[2]),
-                stoi(dataList[3]));
+            Point center(stof(dataList[1]),
+                stof(dataList[2]),
+                stof(dataList[3]));
             
-            float radius = stoi(dataList[4]);
+            float radius = stof(dataList[4]);
 
             Color col(stoi(dataList[5]),
                 stoi(dataList[6]),
                 stoi(dataList[7]));
-            
             col.normalize();
-            Sphere sph(center, radius, col);
-            cout << sph.color.R << endl;
+
+            float difCo = stof(dataList[8]);
+            float espCo = stof(dataList[9]);
+            float ambCo = stof(dataList[10]);
+            float refCo = stof(dataList[11]);
+            float tranCo = stof(dataList[12]);
+            float rugCo = stof(dataList[13]);
+
+            Sphere sph(center, radius, col, difCo, espCo, ambCo,
+                        refCo, tranCo, rugCo);
+
+            sphereList.push_back(sph);
+        }
+        else if(dataList[0] == "p"){
+            Point p(stof(dataList[1]),
+                stof(dataList[2]),
+                stof(dataList[3]));
+            
+            Vector normal(stof(dataList[4]),
+                stof(dataList[5]),
+                stof(dataList[6]));
+
+            Color col(stoi(dataList[7]),
+                stoi(dataList[8]),
+                stoi(dataList[9]));
+            col.normalize();
+
+            float difCo = stof(dataList[10]);
+            float espCo = stof(dataList[11]);
+            float ambCo = stof(dataList[12]);
+            float refCo = stof(dataList[13]);
+            float tranCo = stof(dataList[14]);
+            float rugCo = stof(dataList[15]);
+
+            Plane pln(p, normal, col, difCo, espCo, ambCo,
+                        refCo, tranCo, rugCo);
+
+            planeList.push_back(pln);
+        }
+        else if(dataList[0] == "t"){
+            int triCount = stoi(dataList[1]);
+            int vertCount = stoi(dataList[2]);
+            vector<Point> vertices;
+            vector<tuple<int, int, int>> triangles;
+
+            for (int i=0;i<vertCount;i++){
+                getline(inputFile, line);
+                dataList.clear();
+                stringstream streamLine(line);
+
+                while (getline(streamLine, data, ' ')) {
+                    dataList.push_back(data);
+                }
+
+                Point vertPoint(stof(dataList[0]),
+                                stof(dataList[1]),
+                                stof(dataList[2]));
+
+                vertices.push_back(vertPoint);
+            }
+
+            for (int j=0;j<triCount;j++){
+                getline(inputFile, line);
+                dataList.clear();
+                stringstream streamLine(line);
+
+                while (getline(streamLine, data, ' ')) {
+                    dataList.push_back(data);
+                }
+
+                tuple<int, int, int> vertIndex{stof(dataList[0]),
+                                stof(dataList[1]),
+                                stof(dataList[2])};
+
+                triangles.push_back(vertIndex);
+            }
+
+            getline(inputFile, line);
+            dataList.clear();
+            stringstream streamLine(line);
+
+            while (getline(streamLine, data, ' ')) {
+                dataList.push_back(data);
+            }
+
+            Color col(stoi(dataList[0]),
+                stoi(dataList[1]),
+                stoi(dataList[2]));
+            col.normalize();
+            float difCo = stof(dataList[3]);
+            float espCo = stof(dataList[4]);
+            float ambCo = stof(dataList[5]);
+            float refCo = stof(dataList[6]);
+            float tranCo = stof(dataList[7]);
+            float rugCo = stof(dataList[8]);
+
+            Mesh mesh(triCount, vertCount, vertices, triangles, col,
+            difCo, espCo, ambCo, refCo, tranCo, rugCo);
+
+            meshList.push_back(mesh);
+        }
+        else if(dataList[0] == "c"){
+            
+            float height = stoi(dataList[1]);
+            float width = stoi(dataList[2]);
+            float distScreen = stof(dataList[3]);
+            Vector up(stof(dataList[4]),
+                stof(dataList[5]),
+                stof(dataList[6])); 
+            
+            Point center(stof(dataList[7]),
+                stof(dataList[8]),
+                stof(dataList[9]));
+            
+            Point focus(stof(dataList[10]),
+                stof(dataList[11]),
+                stof(dataList[12]));
+
+            globalCam = new Camera(height, width, distScreen, up, center, focus);
+        }
+        else if(dataList[0] == "l"){
+            Point center(stof(dataList[1]),
+                stof(dataList[2]),
+                stof(dataList[3]));
+            
+            Color intensity(stoi(dataList[4]),
+                stoi(dataList[5]),
+                stoi(dataList[6]));
+
+            Light light(center, intensity);
+            lightList.push_back(light);
+        }
+        else if(dataList[0] == "a"){
+            Color col(stoi(dataList[1]),
+                stoi(dataList[2]),
+                stoi(dataList[3]));
+
+            globalScene = new Scene(col, lightList);
         }
 
             
