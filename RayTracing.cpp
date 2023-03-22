@@ -187,13 +187,13 @@ class Color{
                 if (i <= 2)
                     return (&R)[i];
                 else
-                    __throw_out_of_range;
+                    throw out_of_range("Out of range");
             }
         float& operator [] (uint8_t i) { 
             if (i <= 2)
                 return (&R)[i];
             else
-                __throw_out_of_range;
+                throw out_of_range("Out of range");
             return (&R)[0];
         }
 };
@@ -334,9 +334,9 @@ int main() {
             
             float radius = stof(dataList[4]);
 
-            Color col(stoi(dataList[5]),
-                stoi(dataList[6]),
-                stoi(dataList[7]));
+            Color col(stof(dataList[5]),
+                stof(dataList[6]),
+                stof(dataList[7]));
             col.normalize();
 
             float difCo = stof(dataList[8]);
@@ -360,9 +360,9 @@ int main() {
                 stof(dataList[5]),
                 stof(dataList[6]));
 
-            Color col(stoi(dataList[7]),
-                stoi(dataList[8]),
-                stoi(dataList[9]));
+            Color col(stof(dataList[7]),
+                stof(dataList[8]),
+                stof(dataList[9]));
             col.normalize();
 
             float difCo = stof(dataList[10]);
@@ -423,9 +423,9 @@ int main() {
                 dataList.push_back(data);
             }
 
-            Color col(stoi(dataList[0]),
-                stoi(dataList[1]),
-                stoi(dataList[2]));
+            Color col(stof(dataList[0]),
+                stof(dataList[1]),
+                stof(dataList[2]));
             col.normalize();
             float difCo = stof(dataList[3]);
             float espCo = stof(dataList[4]);
@@ -441,8 +441,8 @@ int main() {
         }
         else if(dataList[0] == "c"){
             
-            float height = stoi(dataList[1]);
-            float width = stoi(dataList[2]);
+            int height = stoi(dataList[1]);
+            int width = stoi(dataList[2]);
             float distScreen = stof(dataList[3]);
             Vector up(stof(dataList[4]),
                 stof(dataList[5]),
@@ -463,17 +463,17 @@ int main() {
                 stof(dataList[2]),
                 stof(dataList[3]));
             
-            Color intensity(stoi(dataList[4]),
-                stoi(dataList[5]),
-                stoi(dataList[6]));
+            Color intensity(stof(dataList[4]),
+                stof(dataList[5]),
+                stof(dataList[6]));
 
             Light light(center, intensity);
             lightList.push_back(light);
         }
         else if(dataList[0] == "a"){
-            Color col(stoi(dataList[1]),
-                stoi(dataList[2]),
-                stoi(dataList[3]));
+            Color col(stof(dataList[1]),
+                stof(dataList[2]),
+                stof(dataList[3]));
 
             globalScene = new Scene(col, lightList);
         }
