@@ -40,7 +40,7 @@ class Vector{
             float len = length();
             if(len>0){
                 float invLen = 1/len;
-
+                
                 x *= invLen;
                 y *= invLen;
                 z *= invLen;
@@ -73,6 +73,14 @@ class Vector{
 
         Vector operator + (const Vector &v) const
         {return Vector(x + v.x, y + v.y, z + v.z);}
+
+        Vector& operator += (const Vector &v)
+        {
+            this->x += v.x;
+            this->y += v.y;
+            this->z += v.z;
+            return *this;
+        }
 
         Vector operator - (const Vector &v) const
         {return Vector(x - v.x, y - v.y, z - v.z);}
@@ -108,6 +116,12 @@ class Point{
             y = 0;
             z = 0;
         }
+
+        Point operator + (const Vector &v) const
+        {return Point(x + v.x, y + v.y, z + v.z);}
+
+        Point operator - (const Vector &v) const
+        {return Point(x - v.x, y - v.y, z - v.z);}
 
         Vector operator + (const Point &v) const
         {return Vector(x + v.x, y + v.y, z + v.z);}
@@ -243,12 +257,47 @@ class Sphere{
             this->tranCo = tranCo;
             this->rugCo = rugCo;
         }
+
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+            Vector L = center - origin;
+            float lengthL = L.length();
+            float tc = L.dot(dir);
+
+            if (tc >= 0){
+                float d = sqrt(lengthL*lengthL - tc*tc);
+
+                if (d <= radius){
+                    float tlc = sqrt(radius*radius - d*d);
+                    float t1 = tc - tlc;
+                    float t2 = tc + tlc;
+                    
+                    if(t1 > 0 || t2 > 0){
+                        if (t1 < t2){
+                            Point inters = origin + (dir * t1);
+                            Vector normal = (inters - center).normalize();
+                            
+                            return tuple<Point, Vector, float>{inters, normal, t1};
+                        }
+                        else{
+                            Point inters = origin + (dir * t2);
+                            Vector normal = (inters - center).normalize();
+                            
+                            return tuple<Point, Vector, float>{inters, normal, t2};
+                        }
+                    }
+
+                }
+
+            }
+
+            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+        }
 };
 
 class Plane{
     public:
         Point point;
-        Vector vector;
+        Vector normal;
         Color color;
         float difCo;
         float espCo;
@@ -257,10 +306,10 @@ class Plane{
         float tranCo;
         float rugCo;
 
-        Plane(Point point, Vector vector, Color color, float difCo,
+        Plane(Point point, Vector normal, Color color, float difCo,
         float espCo, float ambCo, float refCo, float tranCo, float rugCo){
             this->point = point;
-            this->vector = vector;
+            this->normal = normal;
             this->color = color;
             this->difCo = difCo;
             this->espCo = espCo;
@@ -268,6 +317,21 @@ class Plane{
             this->refCo = refCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+        }
+
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+            dir.normalize();
+            float denom = normal.dot(dir);
+
+            if(abs(denom) > 0.0001f){
+                Vector v = point - origin;
+                float t = v.dot(normal) / denom;
+                if(t >= 0){
+                    Point inters = origin + (dir * t);
+                    return tuple<Point, Vector, float>{inters, normal, t};
+                }
+            }
+            return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
 };
 
@@ -301,6 +365,35 @@ class Mesh{
             this->refCo = refCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+
+            getTriNormals();
+        }
+
+        void getTriNormals(){
+            for(int i = 0; i<vertCount;i++){
+                vertNormals.push_back(Vector());
+            }
+            
+            for (tuple<int, int, int> tri : triangles){
+                Point triVerts[3]={vertices[get<0>(tri)],
+                                vertices[get<1>(tri)],
+                                vertices[get<2>(tri)]};
+
+                Vector vec1 = triVerts[1] - triVerts[0];
+                Vector vec2 = triVerts[2] - triVerts[0];
+
+                Vector normal = vec1.cross(vec2).normalize();
+
+                vertNormals[get<0>(tri)] += normal;
+                vertNormals[get<1>(tri)] += normal;
+                vertNormals[get<2>(tri)] += normal;
+
+                triNormals.push_back(normal);
+            }
+
+            for(int i = 0; i<vertCount;i++){
+                vertNormals[i].normalize();
+            }
         }
 };
 
@@ -408,9 +501,9 @@ int main() {
                     dataList.push_back(data);
                 }
 
-                tuple<int, int, int> vertIndex{stof(dataList[0]),
-                                stof(dataList[1]),
-                                stof(dataList[2])};
+                tuple<int, int, int> vertIndex{stof(dataList[0])-1,
+                                stof(dataList[1])-1,
+                                stof(dataList[2])-1};
 
                 triangles.push_back(vertIndex);
             }
@@ -427,6 +520,7 @@ int main() {
                 stof(dataList[1]),
                 stof(dataList[2]));
             col.normalize();
+
             float difCo = stof(dataList[3]);
             float espCo = stof(dataList[4]);
             float ambCo = stof(dataList[5]);
@@ -478,10 +572,11 @@ int main() {
             globalScene = new Scene(col, lightList);
         }
 
-            
+        
     }
 
     inputFile.close();
 
+    tuple<Point, Vector, float> inters = planeList[0].intersect(globalCam->center,globalCam->target-globalCam->center);
     return 0;
 };
