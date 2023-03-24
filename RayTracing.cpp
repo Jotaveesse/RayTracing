@@ -6,6 +6,7 @@
 #include <sstream>
 #include <tuple>
 
+#define PI 3.14159265
 using namespace std;
 
 class Vector{
@@ -87,6 +88,9 @@ class Vector{
 
         Vector operator * (const float &n) const
         {return Vector(x * n, y * n, z * n);}
+
+        Vector operator / (const float &n) const
+        {return Vector(x / n, y / n, z / n);}
 
         const float operator [] (uint8_t i) const { return (&x)[i]; }
         float& operator [] (uint8_t i) { return (&x)[i]; }
@@ -258,9 +262,10 @@ class Sphere{
             this->rugCo = rugCo;
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, float, Color> intersect(Point origin, Vector dir){
             Vector L = center - origin;
             float lengthL = L.length();
+            dir.normalize();
             float tc = L.dot(dir);
 
             if (tc >= 0){
@@ -276,13 +281,13 @@ class Sphere{
                             Point inters = origin + (dir * t1);
                             Vector normal = (inters - center).normalize();
                             
-                            return tuple<Point, Vector, float>{inters, normal, t1};
+                            return tuple<Point, Vector, float, Color>{inters, normal, t1, color};
                         }
                         else{
                             Point inters = origin + (dir * t2);
                             Vector normal = (inters - center).normalize();
                             
-                            return tuple<Point, Vector, float>{inters, normal, t2};
+                            return tuple<Point, Vector, float, Color>{inters, normal, t2, color};
                         }
                     }
 
@@ -290,7 +295,7 @@ class Sphere{
 
             }
 
-            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+            return tuple<Point, Vector, float, Color>{Point(), Vector(), -1, Color()};
         }
 };
 
@@ -319,7 +324,7 @@ class Plane{
             this->rugCo = rugCo;
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, float, Color> intersect(Point origin, Vector dir){
             dir.normalize();
             float denom = normal.dot(dir);
 
@@ -328,10 +333,10 @@ class Plane{
                 float t = v.dot(normal) / denom;
                 if(t >= 0){
                     Point inters = origin + (dir * t);
-                    return tuple<Point, Vector, float>{inters, normal, t};
+                    return tuple<Point, Vector, float, Color>{inters, normal, t, color};
                 }
             }
-            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+            return tuple<Point, Vector, float, Color>{Point(), Vector(), -1, Color()};
         }
 };
 
@@ -396,6 +401,68 @@ class Mesh{
             }
         }
 };
+
+void trace(Camera cam, Scene scn, vector<Sphere> spheres, vector<Plane> planes){
+    ofstream imagePpm("image.ppm");
+
+    imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
+
+    Vector t = cam.target - cam.center;
+    Vector b = cam.up.cross(t);
+    Vector v = t.cross(b);
+    float fov = 90;
+    
+    t.normalize();
+    b.normalize();
+    v.normalize();
+
+    float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
+    float gy = gx * cam.height / cam.width;
+
+    Vector pixWidth = (b * 2 * gx)/(cam.width-1);
+    Vector pixHeight = (v * 2 * gy)/(cam.height-1);
+
+    Vector firstPix = t * cam.distScreen - b * gx + v * gy;
+
+    for(int i=0; i<cam.height;i++){
+        for(int j=0; j<cam.width;j++){
+            tuple<Point, Vector, float, Color> closestInter;
+            float closestDist = numeric_limits<float>::infinity();
+            Color paintColor = scn.ambient;
+
+            for(Sphere sph : spheres){
+                Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
+                tuple<Point, Vector, float, Color> inter = sph.intersect(cam.center, pixVector);
+                
+                if(get<2>(inter) >= pixVector.length() && get<2>(inter) >= 0 && get<2>(inter) < closestDist){
+                    closestDist = get<2>(inter);
+                    closestInter = inter;
+                    paintColor = get<3>(inter);
+                }
+            }
+
+            for(Plane pln : planes){
+                Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
+                tuple<Point, Vector, float, Color> inter = pln.intersect(cam.center, pixVector);
+                
+                if(get<2>(inter) >= pixVector.length() && get<2>(inter) >= 0 && get<2>(inter) < closestDist){
+                    closestDist = get<2>(inter);
+                    closestInter = inter;
+                    paintColor = get<3>(inter);
+                }
+            }
+
+            imagePpm << (int)(paintColor.R*255) << " ";
+            imagePpm << (int)(paintColor.G*255) << " ";
+            imagePpm << (int)(paintColor.B*255) << " ";
+        }
+        imagePpm << "\n";
+    }
+
+    
+    imagePpm.close();
+
+}
 
 int main() {
     vector<Sphere> sphereList;
@@ -534,9 +601,9 @@ int main() {
             meshList.push_back(mesh);
         }
         else if(dataList[0] == "c"){
+            int width = stoi(dataList[1]);
+            int height = stoi(dataList[2]);
             
-            int height = stoi(dataList[1]);
-            int width = stoi(dataList[2]);
             float distScreen = stof(dataList[3]);
             Vector up(stof(dataList[4]),
                 stof(dataList[5]),
@@ -568,7 +635,7 @@ int main() {
             Color col(stof(dataList[1]),
                 stof(dataList[2]),
                 stof(dataList[3]));
-
+            col.normalize();
             globalScene = new Scene(col, lightList);
         }
 
@@ -577,6 +644,7 @@ int main() {
 
     inputFile.close();
 
-    tuple<Point, Vector, float> inters = planeList[0].intersect(globalCam->center,globalCam->target-globalCam->center);
+    trace(*globalCam, *globalScene, sphereList, planeList);
+
     return 0;
 };
