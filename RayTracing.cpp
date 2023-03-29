@@ -10,17 +10,28 @@
 #define PI 3.14159265
 using namespace std;
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin);
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
 
-Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Point specPoint, Vector normal){
+Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
     Color finalColor = scn.ambient * obj.ambCo;
 
     Vector V = (specPoint - interPoint).normalized();
     Color Ir;
-
-    if(obj.refCo != 0){
+    Color It;
+    count -= 1;
+    if(obj.refCo != 0 && count>=0){
         Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
-        Ir = intersectRay(scn, objects, reflection, interPoint);
+        Ir = intersectRay(scn, objects, reflection, interPoint, count);
+    }
+    if(obj.tranCo != 0 && count>=0){
+        
+        const double n = 0;
+        const double cosI = -normal.dot(normal);
+        const double sinT2 = n * n * (1.0 - cosI * cosI);
+        const double cosT = sqrt(1.0 - sinT2);
+        Vector refraction = (V * n) + normal * (n * cosI - cosT);
+
+        It = intersectRay(scn, objects, refraction, interPoint, count);
     }
 
     for(Light light : scn.lights){
@@ -35,14 +46,14 @@ Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Po
         
         finalColor = finalColor + calcColor;
     }
-    finalColor = finalColor + Ir * obj.refCo;
+    finalColor = finalColor + Ir * obj.refCo + It * obj.tranCo;
 
     finalColor.clamp();
     
     return finalColor;
 }
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin){
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count){
     double closestDist = numeric_limits<double>::infinity();
     tuple<Point, Vector, double> closestInter;
     Object* closestObj = NULL;
@@ -57,18 +68,19 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin)
         double dist = get<2>(inter);
 
         //se dist < que tamanho do pixVector ponto está entre tela e foco
-        if(dist >= dir.length() && dist < closestDist){
+        if(dist >= 0.001 && dist < closestDist){
             closestDist = dist;
             closestObj = *iter;
             closestInter = inter;
         }
+        
     }
     
     Color finalColor;
 
     if(closestObj != NULL)
         //intersectRay();
-        finalColor = phong(scn, objects, *closestObj, get<0>(closestInter), origin, get<1>(closestInter));
+        finalColor = phong(scn, objects, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
 
     return finalColor;
 }
@@ -94,12 +106,12 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
-            if(i==550 && j==400)
+            if(i==500 && j==40)
                 cout << "hi";
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, 3);
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
