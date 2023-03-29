@@ -8,14 +8,14 @@ using namespace std;
 
 class Vector{
     public:
-        float x, y, z;
+        double x, y, z;
 
-        Vector(float xx, float yy, float zz){
+        Vector(double xx, double yy, double zz){
             x = xx;
             y = yy;
             z = zz;
         }
-        Vector(float xx){
+        Vector(double xx){
             x = xx;
             y = xx;
             z = xx;
@@ -26,18 +26,18 @@ class Vector{
             z = 0;
         }
 
-        float length(){
+        double length(){
             return sqrt(x * x + y * y + z * z); 
         }
 
-        float sqrdLength(){
+        double sqrdLength(){
             return (x * x + y * y + z * z); 
         }
 
         Vector normalize(){
-            float len = length();
+            double len = length();
             if(len>0){
-                float invLen = 1/len;
+                double invLen = 1/len;
                 
                 x *= invLen;
                 y *= invLen;
@@ -48,9 +48,9 @@ class Vector{
         }
 
         Vector normalized(){
-            float len = length();
+            double len = length();
             if(len>0){
-                float invLen = 1/len;
+                double invLen = 1/len;
                 Vector vec(x * invLen, y * invLen, z * invLen);
                 return vec;
             }
@@ -58,7 +58,7 @@ class Vector{
             return Vector();
         }
 
-        float dot(Vector vec){
+        double dot(Vector vec){
             return x * vec.x + y * vec.y + z * vec.z; 
         }
 
@@ -83,14 +83,14 @@ class Vector{
         Vector operator - (const Vector &v) const
         {return Vector(x - v.x, y - v.y, z - v.z);}
 
-        Vector operator * (const float &n) const
+        Vector operator * (const double &n) const
         {return Vector(x * n, y * n, z * n);}
 
-        Vector operator / (const float &n) const
+        Vector operator / (const double &n) const
         {return Vector(x / n, y / n, z / n);}
 
-        const float operator [] (uint8_t i) const { return (&x)[i]; }
-        float& operator [] (uint8_t i) { return (&x)[i]; }
+        const double operator [] (uint8_t i) const { return (&x)[i]; }
+        double& operator [] (uint8_t i) { return (&x)[i]; }
 
         friend std::ostream& operator << (std::ostream &s, const Vector &v)
         {
@@ -100,14 +100,14 @@ class Vector{
 
 class Point{
     public:
-        float x, y, z;
+        double x, y, z;
 
-        Point(float xx, float yy, float zz){
+        Point(double xx, double yy, double zz){
             x = xx;
             y = yy;
             z = zz;
         }
-        Point(float xx){
+        Point(double xx){
             x = xx;
             y = xx;
             z = xx;
@@ -130,11 +130,11 @@ class Point{
         Vector operator - (const Point &v) const
         {return Vector(x - v.x, y - v.y, z - v.z);}
 
-        Vector operator * (const float &n) const
+        Vector operator * (const double &n) const
         {return Vector(x * n, y * n, z * n);}
 
-        const float operator [] (uint8_t i) const { return (&x)[i]; }
-        float& operator [] (uint8_t i) { return (&x)[i]; }
+        const double operator [] (uint8_t i) const { return (&x)[i]; }
+        double& operator [] (uint8_t i) { return (&x)[i]; }
 
         friend std::ostream& operator << (std::ostream &s, const Point &v)
         {
@@ -153,11 +153,11 @@ class Camera{
         Vector orthoV;
         Vector orthoU;
 
-        float distScreen;
+        double distScreen;
         int height;
         int width;
 
-        Camera(int height, int width, float distScreen, Vector up,
+        Camera(int height, int width, double distScreen, Vector up,
         Point center, Point target){
             this->height = height;
             this->width = width;
@@ -174,9 +174,9 @@ class Camera{
 
 class Color{
     public:
-        float R, G, B;
+        double R, G, B;
         
-        Color(float R, float G, float B){
+        Color(double R, double G, double B){
             this->R = R;
             this->G = G;
             this->B = B;
@@ -189,7 +189,7 @@ class Color{
         }
 
         void normalize(){
-            float invLen = 1.0f/255.0f;
+            double invLen = 1.0f/255.0f;
 
             R *= invLen;
             G *= invLen;
@@ -211,13 +211,13 @@ class Color{
                 B = 1;
         }
 
-        const float operator [] (uint8_t i) const {
+        const double operator [] (uint8_t i) const {
                 if (i <= 2)
                     return (&R)[i];
                 else
                     throw out_of_range("Out of range");
             }
-        float& operator [] (uint8_t i) { 
+        double& operator [] (uint8_t i) { 
             if (i <= 2)
                 return (&R)[i];
             else
@@ -225,7 +225,7 @@ class Color{
             return (&R)[0];
         }
 
-        Color operator * (const float &n) const
+        Color operator * (const double &n) const
         {return Color(R * n,G * n, B * n);}
 
         Color operator + (const Color &c) const
@@ -259,15 +259,15 @@ class Scene{
 class Object{
     public:
         Color color;
-        float difCo;
-        float espCo;
-        float ambCo;
-        float refCo;
-        float tranCo;
-        float rugCo;
+        double difCo;
+        double espCo;
+        double ambCo;
+        double refCo;
+        double tranCo;
+        double rugCo;
 
-        explicit Object(Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo){
+        explicit Object(Color color, double difCo,
+        double espCo, double ambCo, double refCo, double tranCo, double rugCo){
             this->color = color;
             this->difCo = difCo;
             this->espCo = espCo;
@@ -277,18 +277,18 @@ class Object{
             this->rugCo = rugCo;
         }
 
-        virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir){
-            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+        virtual tuple<Point, Vector, double> intersect(Point origin, Vector dir){
+            return tuple<Point, Vector, double>{Point(), Vector(), -1};
         }
 };
 
 class Sphere: public virtual Object{
     public:
         Point center;
-        float radius;
+        double radius;
         
-        Sphere(Point center, float radius, Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo):
+        Sphere(Point center, double radius, Color color, double difCo,
+        double espCo, double ambCo, double refCo, double tranCo, double rugCo):
         Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
             this->center = center;
             this->radius = radius;
@@ -301,32 +301,32 @@ class Sphere: public virtual Object{
             this->rugCo = rugCo;
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, double> intersect(Point origin, Vector dir){
             Vector L = center - origin;
-            float lengthL = L.length();
+            double lengthL = L.length();
             dir.normalize();
-            float tc = L.dot(dir);
+            double tc = L.dot(dir);
 
             if (tc >= 0){
-                float d = sqrt(lengthL*lengthL - tc*tc);
+                double d = lengthL*lengthL - tc*tc;
 
-                if (d <= radius){
-                    float tlc = sqrt(radius*radius - d*d);
-                    float t1 = tc - tlc;
-                    float t2 = tc + tlc;
+                if (d <= radius*radius){
+                    double tlc = sqrt(radius*radius - d);
+                    double t1 = tc - tlc;
+                    double t2 = tc + tlc;
                     
                     if(t1 > 0 || t2 > 0){
                         if (t1 < t2){
                             Point inters = origin + (dir * t1);
                             Vector normal = (inters - center).normalize();
                             
-                            return tuple<Point, Vector, float>{inters, normal, t1};
+                            return tuple<Point, Vector, double>{inters, normal, t1};
                         }
                         else{
                             Point inters = origin + (dir * t2);
                             Vector normal = (inters - center).normalize();
                             
-                            return tuple<Point, Vector, float>{inters, normal, t2};
+                            return tuple<Point, Vector, double>{inters, normal, t2};
                         }
                     }
 
@@ -334,7 +334,7 @@ class Sphere: public virtual Object{
 
             }
 
-            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+            return tuple<Point, Vector, double>{Point(), Vector(), -1};
         }
 };
 
@@ -343,8 +343,8 @@ class Plane: public virtual Object{
         Point point;
         Vector normal;
 
-        Plane(Point point, Vector normal, Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo):
+        Plane(Point point, Vector normal, Color color, double difCo,
+        double espCo, double ambCo, double refCo, double tranCo, double rugCo):
         Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
             this->point = point;
             this->normal = normal;
@@ -357,19 +357,19 @@ class Plane: public virtual Object{
             this->rugCo = rugCo;
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, double> intersect(Point origin, Vector dir){
             dir.normalize();
-            float denom = normal.dot(dir);
+            double denom = normal.dot(dir);
 
             if(abs(denom) > 0.0001f){
                 Vector v = point - origin;
-                float t = v.dot(normal) / denom;
+                double t = v.dot(normal) / denom;
                 if(t >= 0){
                     Point inters = origin + (dir * t);
-                    return tuple<Point, Vector, float>{inters, normal, t};
+                    return tuple<Point, Vector, double>{inters, normal, t};
                 }
             }
-            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+            return tuple<Point, Vector, double>{Point(), Vector(), -1};
         }
 };
 
@@ -383,8 +383,8 @@ class Mesh: public Object{
         vector<Vector> vertNormals;
 
         Mesh(int triCount, int vertCount, vector<Point> vertices,
-        vector<tuple<int, int, int>> triangles, Color color, float difCo, float espCo,
-        float ambCo, float refCo, float tranCo, float rugCo):
+        vector<tuple<int, int, int>> triangles, Color color, double difCo, double espCo,
+        double ambCo, double refCo, double tranCo, double rugCo):
         Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
             this->triCount = triCount;
             this->vertCount = vertCount;
