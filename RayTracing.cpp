@@ -8,43 +8,67 @@
 #include "Objects.h"
 
 #define PI 3.14159265
+#define EPSILON 0.001
+#define MAXBOUNCE 5
+
 using namespace std;
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin);
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
 
-Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Point specPoint, Vector normal){
+Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
     Color finalColor = scn.ambient * obj.ambCo;
-
     Vector V = (specPoint - interPoint).normalized();
     Color Ir;
+    Color It;
 
-    if(obj.refCo != 0){
+    count -= 1;
+    
+    //reflection recursion
+    if(obj.refCo != 0 && count>=0){
         Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
-        Ir = intersectRay(scn, objects, reflection, interPoint);
+        Ir = intersectRay(scn, objects, reflection, interPoint, count);
+    }
+
+    //refraction recursion
+    if(obj.tranCo != 0 && count>=0){
+        float n = 0.3;
+        float cosI = -normal.dot(V);
+        float sinT2 = n * n * (1.0 - cosI * cosI);
+        float cosT = sqrt(1.0 - sinT2);
+        Vector refraction = (V * n) + normal * (n * cosI - cosT);
+
+        It = intersectRay(scn, objects, refraction, interPoint, count);
     }
 
     for(Light light : scn.lights){
-        Color calcColor;
+        Color diffColor;
+        Color specColor;
         Vector Li = (light.center - interPoint).normalized();
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
+        float RiDotV = Ri.dot(V);
+        if(RiDotV < 0)
+            RiDotV = 0;
 
         //phong
-        calcColor = light.color * obj.color * obj.difCo * normal.dot(Li) + light.color * obj.espCo * pow(Ri.dot(V), obj.rugCo);
+        diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
+        diffColor.clamp();
 
-        calcColor.clamp();
+        specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
+        specColor.clamp();
         
-        finalColor = finalColor + calcColor;
+        finalColor = finalColor + diffColor + specColor;
+        finalColor.clamp();
     }
-    finalColor = finalColor + Ir * obj.refCo;
-
+    
+    finalColor = finalColor + Ir * obj.refCo + It * obj.tranCo;
     finalColor.clamp();
     
     return finalColor;
 }
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin){
-    double closestDist = numeric_limits<double>::infinity();
-    tuple<Point, Vector, double> closestInter;
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count){
+    float closestDist = numeric_limits<float>::infinity();
+    tuple<Point, Vector, float> closestInter;
     Object* closestObj = NULL;
 
     //itera sobre todos os objetos
@@ -52,23 +76,23 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin)
     for(iter = objects.begin(); iter != objects.end(); iter++) 
     {
         //ponto de interseção
-        tuple<Point, Vector, double> inter = (*iter)->intersect(origin, dir);
+        tuple<Point, Vector, float> inter = (*iter)->intersect(origin, dir);
         
-        double dist = get<2>(inter);
+        float dist = get<2>(inter);
 
         //se dist < que tamanho do pixVector ponto está entre tela e foco
-        if(dist >= dir.length() && dist < closestDist){
+        if(dist >= EPSILON && dist < closestDist){
             closestDist = dist;
             closestObj = *iter;
             closestInter = inter;
         }
+        
     }
     
     Color finalColor;
 
     if(closestObj != NULL)
-        //intersectRay();
-        finalColor = phong(scn, objects, *closestObj, get<0>(closestInter), origin, get<1>(closestInter));
+        finalColor = phong(scn, objects, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
 
     return finalColor;
 }
@@ -81,10 +105,10 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
     Vector t = (cam.target - cam.center).normalized();
     Vector b = cam.up.cross(t).normalized();
     Vector v = t.cross(b).normalized();
-    double fov = 90;
+    float fov = 90;
 
-    double gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
-    double gy = gx * cam.height / cam.width;
+    float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
+    float gy = gx * cam.height / cam.width;
 
     Vector pixWidth = (b * 2 * gx)/(cam.width-1);
     Vector pixHeight = (v * 2 * gy)/(cam.height-1);
@@ -94,12 +118,10 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
-            if(i==550 && j==400)
-                cout << "hi";
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
@@ -117,19 +139,19 @@ Sphere* extractSphere(vector<string> valueArr){
         stof(valueArr[2]),
         stof(valueArr[3]));
     
-    double radius = stof(valueArr[4]);
+    float radius = stof(valueArr[4]);
 
     Color col(stof(valueArr[5]),
         stof(valueArr[6]),
         stof(valueArr[7]));
     col.normalize();
 
-    double difCo = stof(valueArr[8]);
-    double espCo = stof(valueArr[9]);
-    double ambCo = stof(valueArr[10]);
-    double refCo = stof(valueArr[11]);
-    double tranCo = stof(valueArr[12]);
-    double rugCo = stof(valueArr[13]);
+    float difCo = stof(valueArr[8]);
+    float espCo = stof(valueArr[9]);
+    float ambCo = stof(valueArr[10]);
+    float refCo = stof(valueArr[11]);
+    float tranCo = stof(valueArr[12]);
+    float rugCo = stof(valueArr[13]);
 
     Sphere* sph= new Sphere(center, radius, col,
         difCo, espCo, ambCo, refCo, tranCo, rugCo);
@@ -154,12 +176,12 @@ Plane* extractPlane(vector<string> valueArr){
         stof(valueArr[9]));
     col.normalize();
 
-    double difCo = stof(valueArr[10]);
-    double espCo = stof(valueArr[11]);
-    double ambCo = stof(valueArr[12]);
-    double refCo = stof(valueArr[13]);
-    double tranCo = stof(valueArr[14]);
-    double rugCo = stof(valueArr[15]);
+    float difCo = stof(valueArr[10]);
+    float espCo = stof(valueArr[11]);
+    float ambCo = stof(valueArr[12]);
+    float refCo = stof(valueArr[13]);
+    float tranCo = stof(valueArr[14]);
+    float rugCo = stof(valueArr[15]);
 
     Plane* pln = new Plane(p, normal, col,
         difCo, espCo, ambCo, refCo, tranCo, rugCo);
@@ -171,7 +193,7 @@ Camera* extractCamera(vector<string> valueArr){
     int width = stoi(valueArr[1]);
     int height = stoi(valueArr[2]);
     
-    double distScreen = stof(valueArr[3]);
+    float distScreen = stof(valueArr[3]);
     Vector up(stof(valueArr[4]),
         stof(valueArr[5]),
         stof(valueArr[6])); 
@@ -297,12 +319,12 @@ int main() {
                 stof(valueArr[2]));
             col.normalize();
 
-            double difCo = stof(valueArr[3]);
-            double espCo = stof(valueArr[4]);
-            double ambCo = stof(valueArr[5]);
-            double refCo = stof(valueArr[6]);
-            double tranCo = stof(valueArr[7]);
-            double rugCo = stof(valueArr[8]);
+            float difCo = stof(valueArr[3]);
+            float espCo = stof(valueArr[4]);
+            float ambCo = stof(valueArr[5]);
+            float refCo = stof(valueArr[6]);
+            float tranCo = stof(valueArr[7]);
+            float rugCo = stof(valueArr[8]);
 
             Mesh* mesh = new Mesh(triCount, vertCount, vertices, triangles, col,
                 difCo, espCo, ambCo, refCo, tranCo, rugCo);
@@ -317,6 +339,7 @@ int main() {
         else if(valueArr[0] == "l"){
             lightList.push_back(extractLight(valueArr));
         }
+        //ambiente
         else if(valueArr[0] == "a"){
             Color col(stof(valueArr[1]),
                 stof(valueArr[2]),
