@@ -6,6 +6,8 @@
 #define PI 3.14159265
 using namespace std;
 
+class Point;
+
 class Vector{
     public:
         float x, y, z;
@@ -380,6 +382,7 @@ class Mesh: public Object{
         vector<Point> vertices;
         vector<tuple<int, int, int>> triangles;
         vector<Vector> triNormals;
+        vector<Vector> fullTriNormals;
         vector<Vector> vertNormals;
 
         Mesh(int triCount, int vertCount, vector<Point> vertices,
@@ -398,10 +401,10 @@ class Mesh: public Object{
             this->tranCo = tranCo;
             this->rugCo = rugCo;
 
-            getTriNormals();
+            getNormals();
         }
 
-        void getTriNormals(){
+        void getNormals(){
             for(int i = 0; i<vertCount;i++){
                 vertNormals.push_back(Vector());
             }
@@ -414,7 +417,10 @@ class Mesh: public Object{
                 Vector vec1 = triVerts[1] - triVerts[0];
                 Vector vec2 = triVerts[2] - triVerts[0];
 
-                Vector normal = vec1.cross(vec2).normalize();
+                Vector normal = vec1.cross(vec2);
+                fullTriNormals.push_back(normal);
+
+                normal.normalize();
 
                 vertNormals[get<0>(tri)] += normal;
                 vertNormals[get<1>(tri)] += normal;
@@ -426,5 +432,72 @@ class Mesh: public Object{
             for(int i = 0; i<vertCount;i++){
                 vertNormals[i].normalize();
             }
+        }
+
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+            float closestDist = numeric_limits<float>::infinity();
+            tuple<Point, Vector, float> closestInter = {Point(), Vector(), -1};
+
+            for (int i = 0; i < triangles.size(); i++){
+                Vector normal = fullTriNormals[i];
+                tuple<int, int, int> triangle = triangles[i];
+                Point vert0 = vertices[get<0>(triangle)];
+                Point vert1 = vertices[get<1>(triangle)];
+                Point vert2 = vertices[get<2>(triangle)];
+                float NdotRayDirection = normal.dot(dir);
+                float denom = normal.dot(normal);
+                float u;
+                float v;
+
+                if (fabs(NdotRayDirection) > 0.001){
+                     // compute d parameter using equation 2
+                    float d = -(normal.x * vert0.x + normal.y * vert0.y + normal.z * vert0.z);
+                    
+                    // compute t (equation 3)
+                    float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDirection;
+                    // check if the triangle is behind the ray
+                    if (t >= 0 && t < closestDist){
+                        
+                
+                        // compute the intersection point using equation 1
+                        Point P = origin + dir * t;
+                    
+                        // Step 2: inside-outside test
+                        Vector C; // vector perpendicular to triangle's plane
+                    
+                        // edge 0
+                        Vector edge0 = vert1 - vert0; 
+                        Vector vp0 = P - vert0;
+                        C = edge0.cross(vp0);
+                        if (normal.dot(C) >= 0){
+                            Vector edge1 = vert2 - vert1; 
+                            Vector vp1 = P - vert1;
+                            C = edge1.cross(vp1);
+                            if ((u = normal.dot(C)) >= 0){
+                                Vector edge2 = vert0 - vert2; 
+                                Vector vp2 = P - vert2;
+                                C = edge2.cross(vp2);
+                                if ((v = normal.dot(C)) >= 0){
+                                    closestDist = t;
+
+                                    Vector vNormal0 = vertNormals[get<0>(triangle)];
+                                    Vector vNormal1 = vertNormals[get<1>(triangle)];
+                                    Vector vNormal2 = vertNormals[get<2>(triangle)];
+
+                                    u /= denom;
+                                    v /= denom;
+
+                                    Vector hitNormal = vNormal2 * (1 - u - v) + vNormal1 * v + vNormal0 * u; 
+
+                                    closestInter = {P, hitNormal.normalized(), t};
+                                    //closestInter = {P, normal, t};
+                                }
+                            }
+                        }
+                    }
+                }
+                    
+            }
+            return closestInter;
         }
 };

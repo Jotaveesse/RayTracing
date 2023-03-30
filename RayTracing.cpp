@@ -16,16 +16,23 @@ Color phong(Scene scn, Object obj, Point interPoint, Point specPoint, Vector nor
     Vector V = (specPoint - interPoint).normalized();
 
     for(Light light : scn.lights){
-        Color calcColor;
+        Color diffColor;
+        Color specColor;
         Vector Li = (light.center - interPoint).normalized();
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
+        float RiDotV = Ri.dot(V);
+        if(RiDotV < 0)
+            RiDotV = 0;
 
         //phong
-        calcColor = light.color * obj.color * obj.difCo * normal.dot(Li) + light.color * obj.espCo * pow(Ri.dot(V), obj.rugCo) ;
+        diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
+        diffColor.clamp();
 
-        calcColor.clamp();
+        specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
+        specColor.clamp();
         
-        finalColor = finalColor + calcColor;
+        finalColor = finalColor + diffColor + specColor;
+        finalColor.clamp();
     }
 
     finalColor.clamp();
@@ -54,6 +61,8 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
+            if(i==500&&j==680)
+                cout << "hi";
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter;
             Object* closestObj = NULL;
