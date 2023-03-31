@@ -501,3 +501,69 @@ class Mesh: public Object{
             return closestInter;
         }
 };
+
+
+class Transform{
+    public: 
+        float matrix[4][4] =
+            {
+                {0, 0, 0, 0},
+                {0, 0, 0, 0},
+                {0, 0, 0, 0},
+                {0, 0, 0, 0}
+            };
+
+        Point apply(Point p){
+            Point result = Point();
+            float res[4] = {0, 0, 0, 0};
+
+            for(int i = 0; i < 4; i++){
+                res[i] = this->matrix[i][0]*p.x + this->matrix[i][1]*p.y + this->matrix[i][2]*p.z + this->matrix[i][0];
+            }
+
+            result.x = res[0];
+            result.y = res[1];
+            result.z = res[2];
+            return result;
+        }
+        
+    private:
+        Transform(){
+            
+        }
+        
+
+        Transform operator * (const Transform &other) const{
+            Transform result = Transform();
+
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    result.matrix[i][j] = 
+                        this->matrix[i][0]*other.matrix[0][j] +
+                        this->matrix[i][1]*other.matrix[1][j] +
+                        this->matrix[i][2]*other.matrix[2][j] +
+                        this->matrix[i][3]*other.matrix[3][j];
+                }
+            }
+
+            return result;
+        }
+};
+
+
+class RotationTransform{
+    public:
+        RotationTransform(float angle, char axis){
+            switch (axis)
+            {
+            case 'x':
+                /* code */
+                break;
+            
+            default:
+                break;
+            }
+        }
+
+        
+};
