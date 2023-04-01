@@ -510,7 +510,7 @@ class Transform{
                 {0, 0, 0, 0},
                 {0, 0, 0, 0},
                 {0, 0, 0, 0},
-                {0, 0, 0, 0}
+                {0, 0, 0, 1}
             };
 
         Point apply(Point p){
@@ -518,7 +518,11 @@ class Transform{
             float res[4] = {0, 0, 0, 0};
 
             for(int i = 0; i < 4; i++){
-                res[i] = this->matrix[i][0]*p.x + this->matrix[i][1]*p.y + this->matrix[i][2]*p.z + this->matrix[i][0];
+                res[i] =
+                    this->matrix[i][0]*p.x +
+                    this->matrix[i][1]*p.y +
+                    this->matrix[i][2]*p.z +
+                    this->matrix[i][0];
             }
 
             result.x = res[0];
@@ -527,12 +531,6 @@ class Transform{
             return result;
         }
         
-    private:
-        Transform(){
-            
-        }
-        
-
         Transform operator * (const Transform &other) const{
             Transform result = Transform();
 
@@ -548,22 +546,52 @@ class Transform{
 
             return result;
         }
+
+
+        void print(){
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    printf("%f ", this->matrix[i][j]);
+                }
+                printf("\n");
+            }
+        }
 };
 
 
-class RotationTransform{
+class RotationTransform : public Transform{
     public:
         RotationTransform(float angle, char axis){
             switch (axis)
             {
-            case 'x':
-                /* code */
-                break;
-            
-            default:
-                break;
-            }
-        }
-
-        
+                case 'x':
+                    this->matrix[0][0] =  1;
+                    this->matrix[1][1] =  cos(angle);
+                    this->matrix[2][1] =  sin(angle);
+                    this->matrix[1][2] = -sin(angle);
+                    this->matrix[2][2] =  cos(angle);
+                    break;
+                case 'y':
+                    this->matrix[0][0] =  cos(angle);
+                    this->matrix[1][1] =  1;
+                    this->matrix[0][2] =  sin(angle);
+                    this->matrix[2][0] = -sin(angle);
+                    this->matrix[2][2] =  cos(angle);
+                    break;
+                case 'z':
+                    this->matrix[0][0] =  cos(angle);
+                    this->matrix[1][0] =  sin(angle);
+                    this->matrix[0][1] = -sin(angle);
+                    this->matrix[1][1] =  cos(angle);
+                    this->matrix[2][2] =  1;
+                    break;
+                default:
+                    this->matrix[0][0] = 1;
+                    this->matrix[1][1] = 1;
+                    this->matrix[2][2] = 1;
+                    printf("Eixo de rotação inválido passado, rotação será substituida por transformação identidade\n");
+                    break;
+                }
+        }        
 };
+
