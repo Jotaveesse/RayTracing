@@ -507,9 +507,9 @@ class Transform{
     public: 
         float matrix[4][4] =
             {
-                {0, 0, 0, 0},
-                {0, 0, 0, 0},
-                {0, 0, 0, 0},
+                {1, 0, 0, 0},
+                {0, 1, 0, 0},
+                {0, 0, 1, 0},
                 {0, 0, 0, 1}
             };
 
@@ -586,9 +586,6 @@ class RotationTransform : public Transform{
                     this->matrix[2][2] =  1;
                     break;
                 default:
-                    this->matrix[0][0] = 1;
-                    this->matrix[1][1] = 1;
-                    this->matrix[2][2] = 1;
                     printf("Eixo de rotação inválido passado, rotação será substituida por transformação identidade\n");
                     break;
                 }
