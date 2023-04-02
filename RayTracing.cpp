@@ -194,6 +194,36 @@ Light extractLight(vector<string> valueArr){
 }
 
 int main() {
+    Point p(1, 2, 2);
+    Transform transl = TranslationTransform(p);
+    printf("Transformação de translação tornando o ponto (1,2,2) origem:\n");
+    transl.print();
+
+
+    Transform rot = RotationTransform(1.57, 'x');
+    printf("Transformação de rotação em torno do eixo x a 1.57 rads:\n");
+    rot.print();
+
+
+    Point rotatedOnOrigin = rot.apply(p);
+    printf("Rotação em torno da origem leva (1,2,2) a (%f, %f, %f)\n", rotatedOnOrigin.x, rotatedOnOrigin.y, rotatedOnOrigin.z);
+
+    Transform rotateOnP = transl.inverse()*rot*transl;
+    rotateOnP.print();
+
+    Point rotatedOnP = rotateOnP.apply(p);
+    printf("Rotação em torno de p leva (1,2,2) a (%f, %f, %f)\n", rotatedOnP.x, rotatedOnP.y, rotatedOnP.z);
+    
+
+    Point translated = transl.apply(p);
+    printf("(%f,%f,%f)\n", translated.x, translated.y, translated.z);
+    Point translatedThenRotated = rot.apply(translated);
+    printf("(%f,%f,%f)\n", translatedThenRotated.x, translatedThenRotated.y, translatedThenRotated.z);
+    Point translatedThenRotatedThenUntranslated = transl.inverse().apply(translatedThenRotated);
+    printf("(%f,%f,%f)\n", translatedThenRotatedThenUntranslated.x, translatedThenRotatedThenUntranslated.y, translatedThenRotatedThenUntranslated.z);
+
+    exit(0);
+
     vector<Light> lightList;
     vector<Object*> objectList;
 
