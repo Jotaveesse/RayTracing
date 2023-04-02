@@ -694,8 +694,14 @@ void partialPivot(float (*m)[4], float (*inverse)[4], int i) {
 
 
 class RotationTransform : public Transform{
+    float _angle;
+    char _axis;
+    
     public:
         RotationTransform(float angle, char axis){
+            this->_angle = angle;
+            this->_axis = axis;
+
             switch (axis)
             {
                 case 'x':
@@ -722,8 +728,12 @@ class RotationTransform : public Transform{
                 default:
                     printf("Eixo de rotação inválido passado, rotação será substituida por transformação identidade\n");
                     break;
-                }
-        }        
+            }
+        }
+
+        Transform inverse(){
+            return RotationTransform(-this->_angle, this->_axis);
+        }
 };
 
 class TranslationTransform : public Transform {
@@ -753,5 +763,18 @@ class TranslationTransform : public Transform {
             this->matrix[0][3] = -origin.x;
             this->matrix[1][3] = -origin.y;
             this->matrix[2][3] = -origin.z;
+        }
+
+
+        Transform inverse(){
+            Vector newTranslation = Vector(
+                -this->matrix[0][3],
+                -this->matrix[1][3],
+                -this->matrix[2][3]
+            );
+
+            TranslationTransform result(newTranslation);
+
+            return result;
         }
 };
