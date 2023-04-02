@@ -685,3 +685,32 @@ class RotationTransform : public Transform{
         }        
 };
 
+class TranslationTransform : public Transform {
+    public:
+
+        /*
+            Este construtor inicializa uma
+            transformacao na qual os objetos afetados
+            serao trasladados na direcao do vetor
+            passado como argumento
+        */
+        TranslationTransform(Vector& translation){
+            this->matrix[0][3] = translation.x;
+            this->matrix[1][3] = translation.y;
+            this->matrix[2][3] = translation.z;
+        }
+
+        
+        /*
+            Este construtor inicializa uma
+            transformacao na qual os objetos afetados
+            serao trasladados de forma que o ponto
+            passado como argumento seja como a "nova
+            origem" do sistema de coordenadas
+        */
+        TranslationTransform(Point& origin){
+            this->matrix[0][3] = -origin.x;
+            this->matrix[1][3] = -origin.y;
+            this->matrix[2][3] = -origin.z;
+        }
+};
