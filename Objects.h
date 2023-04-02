@@ -441,6 +441,10 @@ class Sphere: public virtual Object{
             this->rugCo = rugCo;
         }
 
+        void apply(Transform& t){
+            center = t.apply(center);
+        }
+
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             Vector L = center - origin;
             float lengthL = L.length();
@@ -497,6 +501,11 @@ class Plane: public virtual Object{
             this->rugCo = rugCo;
         }
 
+        void apply(Transform& t){
+            point = t.apply(point);
+            normal = t.apply(normal);
+        }
+
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             dir.normalize();
             float denom = normal.dot(dir);
@@ -540,6 +549,24 @@ class Mesh: public Object{
             this->rugCo = rugCo;
 
             getNormals();
+        }
+
+        void apply(Transform& t){
+            for(int i = 0; i < this->vertices.size(); i++){
+                this->vertices[i] = t.apply(this->vertices[i]);
+            }
+
+            for(int i = 0; i < this->triNormals.size(); i++){
+                this->triNormals[i] = t.apply(this->triNormals[i]);
+            }
+
+            for(int i = 0; i < this->fullTriNormals.size(); i++){
+                this->fullTriNormals[i] = t.apply(this->fullTriNormals[i]);
+            }
+
+            for(int i = 0; i < this->vertNormals.size(); i++){
+                this->vertNormals[i] = t.apply(this->vertNormals[i]);
+            }
         }
 
         void getNormals(){
