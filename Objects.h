@@ -8,6 +8,9 @@ using namespace std;
 
 class Point;
 
+void swap(float* row1, float* row2);
+void partialPivot(float (*m)[4], float (*inverse)[4], int i);
+
 class Vector{
     public:
         float x, y, z;
@@ -144,6 +147,132 @@ class Point{
         }
 };
 
+
+class Transform{
+    public: 
+        float matrix[4][4] =
+            {
+                {1, 0, 0, 0},
+                {0, 1, 0, 0},
+                {0, 0, 1, 0},
+                {0, 0, 0, 1}
+            };
+
+        Point apply(Point& p){
+            Point result = Point();
+            float res[4] = {0, 0, 0, 0};
+
+            for(int i = 0; i < 4; i++){
+                res[i] =
+                    this->matrix[i][0]*p.x +
+                    this->matrix[i][1]*p.y +
+                    this->matrix[i][2]*p.z +
+                    this->matrix[i][3]*1;
+            }
+
+            result.x = res[0];
+            result.y = res[1];
+            result.z = res[2];
+            return result;
+        }
+
+        Vector apply(Vector& v){
+            Vector result;
+            float res[3] = {0, 0, 0};
+
+            for(int i = 0; i < 3; i++){
+                res[i] =
+                    this->matrix[i][0]*v.x +
+                    this->matrix[i][1]*v.y +
+                    this->matrix[i][2]*v.z;
+            }
+
+            result.x = res[0];
+            result.y = res[1];
+            result.z = res[2];
+            return result;
+        }
+        
+
+        Transform copy(){
+            Transform result;
+
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    result.matrix[i][j] = this->matrix[i][j];
+                }
+            }
+
+            return result;
+        }
+
+        Transform inverse(){
+            Transform result;
+            Transform copy = this->copy();
+
+            float (*m)[4] = copy.matrix;
+            float (*inverse)[4] = result.matrix;
+
+            // Aplica a eliminação gaussiana com pivoteamento parcial
+            for (int i = 0; i < 4; i++) {
+                partialPivot(m, inverse, i);
+                double pivot = m[i][i];
+                // Divide a linha atual pelo pivô
+                for (int j = 0; j < 4; j++) {
+                    m[i][j] /= pivot;
+                    inverse[i][j] /= pivot;
+                }
+                // Subtrai a linha atual das linhas abaixo dela
+                for (int j = i + 1; j < 4; j++) {
+                    double factor = m[j][i];
+                    for (int k = 0; k < 4; k++) {
+                        m[j][k] -= factor * m[i][k];
+                        inverse[j][k] -= factor * inverse[i][k];
+                    }
+                }
+            }
+            // Aplica a eliminação gaussiana com pivoteamento parcial inverso
+            for (int i = 4 - 1; i >= 0; i--) {
+                for (int j = i - 1; j >= 0; j--) {
+                    double factor = m[j][i];
+                    for (int k = 0; k < 4; k++) {
+                        m[j][k] -= factor * m[i][k];
+                        inverse[j][k] -= factor * inverse[i][k];
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        Transform operator * (const Transform &other) const{
+            Transform result;
+
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    result.matrix[i][j] = 
+                        this->matrix[i][0]*other.matrix[0][j] +
+                        this->matrix[i][1]*other.matrix[1][j] +
+                        this->matrix[i][2]*other.matrix[2][j] +
+                        this->matrix[i][3]*other.matrix[3][j];
+                }
+            }
+
+            return result;
+        }
+
+
+        void print(){
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 4; j++){
+                    printf("%f ", this->matrix[i][j]);
+                }
+                printf("\n");
+            }
+        }
+};
+
+
 class Camera{
     
     public:
@@ -171,6 +300,15 @@ class Camera{
             orthoU = (target - center).normalize();
             orthoV = orthoU.cross(up).normalize();
             orthoW = orthoU.cross(orthoV);
+        }
+
+        void apply(Transform& t){
+            this->center = t.apply(this->center);
+            this->target = t.apply(this->target);
+            this->up = t.apply(this->up);
+            this->orthoW = t.apply(this->orthoW);
+            this->orthoW = t.apply(this->orthoW);
+            this->orthoW = t.apply(this->orthoW);
         }
 };
 
@@ -526,130 +664,6 @@ void partialPivot(float (*m)[4], float (*inverse)[4], int i) {
         swap(inverse[i], inverse[maxRow]);
     }
 }
-
-class Transform{
-    public: 
-        float matrix[4][4] =
-            {
-                {1, 0, 0, 0},
-                {0, 1, 0, 0},
-                {0, 0, 1, 0},
-                {0, 0, 0, 1}
-            };
-
-        Point apply(Point& p){
-            Point result = Point();
-            float res[4] = {0, 0, 0, 0};
-
-            for(int i = 0; i < 4; i++){
-                res[i] =
-                    this->matrix[i][0]*p.x +
-                    this->matrix[i][1]*p.y +
-                    this->matrix[i][2]*p.z +
-                    this->matrix[i][3]*1;
-            }
-
-            result.x = res[0];
-            result.y = res[1];
-            result.z = res[2];
-            return result;
-        }
-
-        Vector apply(Vector& v){
-            Vector result;
-            float res[3] = {0, 0, 0};
-
-            for(int i = 0; i < 3; i++){
-                res[i] =
-                    this->matrix[i][0]*v.x +
-                    this->matrix[i][1]*v.y +
-                    this->matrix[i][2]*v.z;
-            }
-
-            result.x = res[0];
-            result.y = res[1];
-            result.z = res[2];
-            return result;
-        }
-        
-
-        Transform copy(){
-            Transform result;
-
-            for(int i = 0; i < 4; i++){
-                for(int j = 0; j < 4; j++){
-                    result.matrix[i][j] = this->matrix[i][j];
-                }
-            }
-
-            return result;
-        }
-
-        Transform inverse(){
-            Transform result;
-            Transform copy = this->copy();
-
-            float (*m)[4] = copy.matrix;
-            float (*inverse)[4] = result.matrix;
-
-            // Aplica a eliminação gaussiana com pivoteamento parcial
-            for (int i = 0; i < 4; i++) {
-                partialPivot(m, inverse, i);
-                double pivot = m[i][i];
-                // Divide a linha atual pelo pivô
-                for (int j = 0; j < 4; j++) {
-                    m[i][j] /= pivot;
-                    inverse[i][j] /= pivot;
-                }
-                // Subtrai a linha atual das linhas abaixo dela
-                for (int j = i + 1; j < 4; j++) {
-                    double factor = m[j][i];
-                    for (int k = 0; k < 4; k++) {
-                        m[j][k] -= factor * m[i][k];
-                        inverse[j][k] -= factor * inverse[i][k];
-                    }
-                }
-            }
-            // Aplica a eliminação gaussiana com pivoteamento parcial inverso
-            for (int i = 4 - 1; i >= 0; i--) {
-                for (int j = i - 1; j >= 0; j--) {
-                    double factor = m[j][i];
-                    for (int k = 0; k < 4; k++) {
-                        m[j][k] -= factor * m[i][k];
-                        inverse[j][k] -= factor * inverse[i][k];
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        Transform operator * (const Transform &other) const{
-            Transform result;
-
-            for(int i = 0; i < 4; i++){
-                for(int j = 0; j < 4; j++){
-                    result.matrix[i][j] = 
-                        this->matrix[i][0]*other.matrix[0][j] +
-                        this->matrix[i][1]*other.matrix[1][j] +
-                        this->matrix[i][2]*other.matrix[2][j] +
-                        this->matrix[i][3]*other.matrix[3][j];
-                }
-            }
-
-            return result;
-        }
-
-
-        void print(){
-            for(int i = 0; i < 4; i++){
-                for(int j = 0; j < 4; j++){
-                    printf("%f ", this->matrix[i][j]);
-                }
-                printf("\n");
-            }
-        }
-};
 
 
 class RotationTransform : public Transform{
