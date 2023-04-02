@@ -731,7 +731,7 @@ class RotationTransform : public Transform{
             }
         }
 
-        Transform inverse(){
+        RotationTransform inverse(){
             return RotationTransform(-this->_angle, this->_axis);
         }
 };
@@ -766,15 +766,13 @@ class TranslationTransform : public Transform {
         }
 
 
-        Transform inverse(){
+        TranslationTransform inverse() {
             Vector newTranslation = Vector(
                 -this->matrix[0][3],
                 -this->matrix[1][3],
                 -this->matrix[2][3]
             );
 
-            TranslationTransform result(newTranslation);
-
-            return result;
+            return TranslationTransform(newTranslation);
         }
 };
