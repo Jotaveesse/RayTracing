@@ -546,7 +546,7 @@ class Transform{
                     this->matrix[i][0]*p.x +
                     this->matrix[i][1]*p.y +
                     this->matrix[i][2]*p.z +
-                    this->matrix[i][0]*1;
+                    this->matrix[i][3]*1;
             }
 
             result.x = res[0];
