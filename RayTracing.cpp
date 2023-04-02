@@ -320,14 +320,6 @@ int main() {
 
     inputFile.close();
 
-    Transform transl = TranslationTransform(globalCam->center);
-    Transform rot = RotationTransform(-0.2, 'y');
-    Vector translVector(5, 5, 5);
-    Transform importantTransl = TranslationTransform(translVector);
-    Transform transf = transl.inverse()*rot*importantTransl*transl;
-
-    globalCam->apply(transf);
-
     trace(*globalCam, *globalScene, objectList);
 
     return 0;
