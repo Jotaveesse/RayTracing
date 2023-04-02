@@ -4,6 +4,7 @@
 #include <tuple>
 
 #define PI 3.14159265
+#define kEpsilon 0.001f
 using namespace std;
 
 class Point;
@@ -15,20 +16,20 @@ class Vector{
     public:
         float x, y, z;
 
-        Vector(float xx, float yy, float zz){
-            x = xx;
-            y = yy;
-            z = zz;
+        Vector(float x, float y, float z){
+            this->x = x;
+            this->y = y;
+            this->z = z;
         }
-        Vector(float xx){
-            x = xx;
-            y = xx;
-            z = xx;
+        Vector(float x){
+            this->x = x;
+            this->y = x;
+            this->z = x;
         }
         Vector(){
-            x = 0;
-            y = 0;
-            z = 0;
+            this->x = 0;
+            this->y = 0;
+            this->z = 0;
         }
 
         float length(){
@@ -107,20 +108,20 @@ class Point{
     public:
         float x, y, z;
 
-        Point(float xx, float yy, float zz){
-            x = xx;
-            y = yy;
-            z = zz;
+        Point(float x, float y, float z){
+            this->x = x;
+            this->y = y;
+            this->z = z;
         }
-        Point(float xx){
-            x = xx;
-            y = xx;
-            z = xx;
+        Point(float x){
+            this->x = x;
+            this->y = x;
+            this->z = x;
         }
         Point(){
-            x = 0;
-            y = 0;
-            z = 0;
+            this->x = 0;
+            this->y = 0;
+            this->z = 0;
         }
 
         Point operator + (const Vector &v) const
@@ -298,7 +299,7 @@ class Camera{
             this->target = target;
 
             orthoU = (target - center).normalize();
-            orthoV = orthoU.cross(up).normalize();
+            orthoV = up.cross(orthoU).normalize();
             orthoW = orthoU.cross(orthoV);
         }
 
@@ -320,6 +321,12 @@ class Color{
             this->R = R;
             this->G = G;
             this->B = B;
+        }
+
+        Color(float C){
+            this->R = C;
+            this->G = C;
+            this->B = C;
         }
 
         Color(){
@@ -417,7 +424,7 @@ class Object{
             this->rugCo = rugCo;
         }
 
-        virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
 };
@@ -445,7 +452,7 @@ class Sphere: public virtual Object{
             center = t.apply(center);
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             Vector L = center - origin;
             float lengthL = L.length();
             dir.normalize();
@@ -506,11 +513,11 @@ class Plane: public virtual Object{
             normal = t.apply(normal);
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             dir.normalize();
             float denom = normal.dot(dir);
 
-            if(abs(denom) > 0.0001f){
+            if(abs(denom) > kEpsilon){
                 Vector v = point - origin;
                 float t = v.dot(normal) / denom;
                 if(t >= 0){
@@ -583,15 +590,13 @@ class Mesh: public Object{
                 Vector vec2 = triVerts[2] - triVerts[0];
 
                 Vector normal = vec1.cross(vec2);
-                fullTriNormals.push_back(normal);
+                triNormals.push_back(normal);
 
                 normal.normalize();
 
                 vertNormals[get<0>(tri)] += normal;
                 vertNormals[get<1>(tri)] += normal;
                 vertNormals[get<2>(tri)] += normal;
-
-                triNormals.push_back(normal);
             }
 
             for(int i = 0; i<vertCount;i++){
@@ -599,12 +604,12 @@ class Mesh: public Object{
             }
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter = {Point(), Vector(), -1};
 
             for (int i = 0; i < triangles.size(); i++){
-                Vector normal = fullTriNormals[i];
+                Vector normal = triNormals[i];
                 tuple<int, int, int> triangle = triangles[i];
                 Point vert0 = vertices[get<0>(triangle)];
                 Point vert1 = vertices[get<1>(triangle)];
@@ -613,53 +618,65 @@ class Mesh: public Object{
                 float denom = normal.dot(normal);
                 float u;
                 float v;
-
-                if (fabs(NdotRayDirection) > 0.001){
-                     // compute d parameter using equation 2
+                
+                if (fabs(NdotRayDirection) > kEpsilon){
                     float d = -(normal.x * vert0.x + normal.y * vert0.y + normal.z * vert0.z);
                     
-                    // compute t (equation 3)
                     float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDirection;
-                    // check if the triangle is behind the ray
-                    if (t >= 0 && t < closestDist){
-                        
-                
-                        // compute the intersection point using equation 1
-                        Point P = origin + dir * t;
                     
-                        // Step 2: inside-outside test
-                        Vector C; // vector perpendicular to triangle's plane
-                    
-                        // edge 0
-                        Vector edge0 = vert1 - vert0; 
-                        Vector vp0 = P - vert0;
-                        C = edge0.cross(vp0);
-                        if (normal.dot(C) >= 0){
-                            Vector edge1 = vert2 - vert1; 
-                            Vector vp1 = P - vert1;
-                            C = edge1.cross(vp1);
-                            if ((u = normal.dot(C)) >= 0){
-                                Vector edge2 = vert0 - vert2; 
-                                Vector vp2 = P - vert2;
-                                C = edge2.cross(vp2);
-                                if ((v = normal.dot(C)) >= 0){
-                                    closestDist = t;
+                    //se t<0 o triangulo está atras do raio
+                    if (t < 0 || t >= closestDist)
+                        break;
 
-                                    Vector vNormal0 = vertNormals[get<0>(triangle)];
-                                    Vector vNormal1 = vertNormals[get<1>(triangle)];
-                                    Vector vNormal2 = vertNormals[get<2>(triangle)];
+                    Point interPoint = origin + dir * t;
 
-                                    u /= denom;
-                                    v /= denom;
-
-                                    Vector hitNormal = vNormal2 * (1 - u - v) + vNormal1 * v + vNormal0 * u; 
-
-                                    closestInter = {P, hitNormal.normalized(), t};
-                                    //closestInter = {P, normal, t};
-                                }
-                            }
-                        }
+                    //checa se a face do triangulo está na direção da camera
+                    if(backCulling){
+                        Vector origInter = (origin - interPoint).normalized();
+                        float dot = origInter.dot(normal.normalized());
+                        if(dot<0) 
+                            continue;
                     }
+                    
+                    //vetor perpendicular ao plano do triangulo
+                    Vector interPerp;
+
+                    Vector edge0 = vert1 - vert0; 
+                    Vector vp0 = interPoint - vert0;
+                    interPerp = edge0.cross(vp0);
+
+                    //checa interseção estado do lado certo desta aresta
+                    if (normal.dot(interPerp) < 0)
+                        continue;
+
+                    Vector edge1 = vert2 - vert1; 
+                    Vector vp1 = interPoint - vert1;
+                    interPerp = edge1.cross(vp1);
+
+                    //checa interseção estado do lado certo desta aresta
+                    if ((u = normal.dot(interPerp)) < 0)
+                        continue;
+
+                    Vector edge2 = vert0 - vert2; 
+                    Vector vp2 = interPoint - vert2;
+                    interPerp = edge2.cross(vp2);
+
+                    //checa interseção estado do lado certo desta aresta
+                    if ((v = normal.dot(interPerp)) < 0)
+                        continue;
+
+                    Vector vNormal0 = vertNormals[get<0>(triangle)];
+                    Vector vNormal1 = vertNormals[get<1>(triangle)];
+                    Vector vNormal2 = vertNormals[get<2>(triangle)];
+
+                    u /= denom;
+                    v /= denom;
+
+                    //interpola as normais dos vetores
+                    Vector hitNormal = vNormal0 * u + vNormal1 * v +vNormal2 * (1 - u - v); 
+                    
+                    closestInter = {interPoint, hitNormal.normalized(), t};
+                    closestDist = t;
                 }
                     
             }

@@ -8,9 +8,10 @@
 #include "Objects.h"
 
 #define PI 3.14159265
+#define kEpsilon 0.001f
 using namespace std;
 
-Color phong(Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal){
+Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal){
     Color finalColor = scn.ambient * obj.ambCo;
 
     Vector V = (specPoint - interPoint).normalized();
@@ -18,21 +19,46 @@ Color phong(Scene scn, Object obj, Point interPoint, Point specPoint, Vector nor
     for(Light light : scn.lights){
         Color diffColor;
         Color specColor;
-        Vector Li = (light.center - interPoint).normalized();
+        Vector Li = (light.center - interPoint);
+        float distLight = Li.length();
+        Li.normalize();
+
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
-        float RiDotV = Ri.dot(V);
-        if(RiDotV < 0)
-            RiDotV = 0;
-
-        //phong
-        diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
-        diffColor.clamp();
-
-        specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
-        specColor.clamp();
         
-        finalColor = finalColor + diffColor + specColor;
-        finalColor.clamp();
+        bool blocked = false;
+
+        //checa se a luz esta bloqueada por algum objeto
+        vector<Object*>::iterator iter;
+        for(iter = objects.begin(); iter != objects.end(); iter++) 
+        {
+            //ponto de interseção
+            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
+            
+            float dist = get<2>(inter);
+
+            //se dist < que distLight ponto está entre tela e foco
+            if(dist >= kEpsilon && dist < distLight){
+                blocked = true;
+                break;
+            }
+        }
+
+        if(!blocked){
+            float RiDotV = Ri.dot(V);
+            //impede que RiDotV seja negativo
+            if(RiDotV < 0)
+                RiDotV = 0;
+
+            //phong
+            diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
+            diffColor.clamp();
+
+            specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
+            specColor.clamp();
+            
+            finalColor = finalColor + diffColor + specColor;
+            finalColor.clamp();
+        }
     }
 
     finalColor.clamp();
@@ -45,23 +71,20 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
 
     imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
 
-    Vector t = (cam.target - cam.center).normalized();
-    Vector b = cam.up.cross(t).normalized();
-    Vector v = t.cross(b).normalized();
     float fov = 90;
 
     float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
     float gy = gx * cam.height / cam.width;
 
-    Vector pixWidth = (b * 2 * gx)/(cam.width-1);
-    Vector pixHeight = (v * 2 * gy)/(cam.height-1);
+    Vector pixWidth = (cam.orthoV * 2 * gx)/(cam.width-1);
+    Vector pixHeight = (cam.orthoW * 2 * gy)/(cam.height-1);
 
     //pixel no canto superior esquerdo
-    Vector firstPix = t * cam.distScreen - b * gx + v * gy;
+    Vector firstPix = cam.orthoU * cam.distScreen - cam.orthoV * gx + cam.orthoW * gy;
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
-            if(i==500&&j==680)
+            if(i==400&&j==160)
                 cout << "hi";
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter;
@@ -90,7 +113,7 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
             Color finalColor;
 
             if(closestObj != NULL)
-                finalColor = phong(scn, *closestObj, get<0>(closestInter), cam.center, get<1>(closestInter));
+                finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), cam.center, get<1>(closestInter));
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
