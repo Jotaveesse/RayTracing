@@ -84,8 +84,6 @@ void trace(Camera cam, Scene scn, vector<Object*> objects){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
-            if(i==400&&j==160)
-                cout << "hi";
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter;
             Object* closestObj = NULL;
@@ -343,7 +341,18 @@ int main() {
 
     inputFile.close();
 
+    Transform t = Transform();
+    RotationTransform rt = RotationTransform(340 , 'y');
+
+    t.matrix[1][3] = 8;
+    Sphere* c = dynamic_cast<Sphere*>(objectList[1]);
+    Mesh* m = dynamic_cast<Mesh*>(objectList[8]);
+    c->center = t.apply(c->center);
+
+    m->apply(rt);
+
     trace(*globalCam, *globalScene, objectList);
+    
 
     return 0;
 };

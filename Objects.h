@@ -373,7 +373,7 @@ class Color{
         }
 
         Color operator * (const float &n) const
-        {return Color(R * n,G * n, B * n);}
+        {return Color(R * n, G * n, B * n);}
 
         Color operator + (const Color &c) const
         {return Color(R + c.R, G + c.G, B + c.B);}
@@ -480,11 +480,8 @@ class Sphere: public virtual Object{
                             return tuple<Point, Vector, float>{inters, normal, t2};
                         }
                     }
-
                 }
-
             }
-
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
 };
@@ -536,7 +533,6 @@ class Mesh: public Object{
         vector<Point> vertices;
         vector<tuple<int, int, int>> triangles;
         vector<Vector> triNormals;
-        vector<Vector> fullTriNormals;
         vector<Vector> vertNormals;
 
         Mesh(int triCount, int vertCount, vector<Point> vertices,
@@ -565,10 +561,6 @@ class Mesh: public Object{
 
             for(int i = 0; i < this->triNormals.size(); i++){
                 this->triNormals[i] = t.apply(this->triNormals[i]);
-            }
-
-            for(int i = 0; i < this->fullTriNormals.size(); i++){
-                this->fullTriNormals[i] = t.apply(this->fullTriNormals[i]);
             }
 
             for(int i = 0; i < this->vertNormals.size(); i++){
@@ -673,7 +665,7 @@ class Mesh: public Object{
                     v /= denom;
 
                     //interpola as normais dos vetores
-                    Vector hitNormal = vNormal0 * u + vNormal1 * v +vNormal2 * (1 - u - v); 
+                    Vector hitNormal = vNormal0 * u + vNormal1 * v + vNormal2 * (1 - u - v); 
                     
                     closestInter = {interPoint, hitNormal.normalized(), t};
                     closestDist = t;
@@ -716,30 +708,30 @@ class RotationTransform : public Transform{
     
     public:
         RotationTransform(float angle, char axis){
-            this->_angle = angle;
+            this->_angle = angle * (PI/180);
             this->_axis = axis;
 
             switch (axis)
             {
                 case 'x':
                     this->matrix[0][0] =  1;
-                    this->matrix[1][1] =  cos(angle);
-                    this->matrix[2][1] =  sin(angle);
-                    this->matrix[1][2] = -sin(angle);
-                    this->matrix[2][2] =  cos(angle);
+                    this->matrix[1][1] =  cos(_angle);
+                    this->matrix[2][1] =  sin(_angle);
+                    this->matrix[1][2] = -sin(_angle);
+                    this->matrix[2][2] =  cos(_angle);
                     break;
                 case 'y':
-                    this->matrix[0][0] =  cos(angle);
+                    this->matrix[0][0] =  cos(_angle);
                     this->matrix[1][1] =  1;
-                    this->matrix[0][2] =  sin(angle);
-                    this->matrix[2][0] = -sin(angle);
-                    this->matrix[2][2] =  cos(angle);
+                    this->matrix[0][2] =  sin(_angle);
+                    this->matrix[2][0] = -sin(_angle);
+                    this->matrix[2][2] =  cos(_angle);
                     break;
                 case 'z':
-                    this->matrix[0][0] =  cos(angle);
-                    this->matrix[1][0] =  sin(angle);
-                    this->matrix[0][1] = -sin(angle);
-                    this->matrix[1][1] =  cos(angle);
+                    this->matrix[0][0] =  cos(_angle);
+                    this->matrix[1][0] =  sin(_angle);
+                    this->matrix[0][1] = -sin(_angle);
+                    this->matrix[1][1] =  cos(_angle);
                     this->matrix[2][2] =  1;
                     break;
                 default:
