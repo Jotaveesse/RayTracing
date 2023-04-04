@@ -36,7 +36,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
             
             float dist = get<2>(inter);
 
-            //se dist < que distLight ponto está entre tela e foco
+            //se dist > distLight ponto esta atras da luz
             if(dist >= kEpsilon && dist < distLight){
                 blocked = true;
                 break;
@@ -341,15 +341,16 @@ int main() {
 
     inputFile.close();
 
-    Transform t = Transform();
-    RotationTransform rt = RotationTransform(340 , 'y');
+    Vector trans(0, 0, 3);
+    TranslationTransform t = TranslationTransform(trans);
+    RotationTransform rt = RotationTransform(-10 , 'x');
 
-    t.matrix[1][3] = 8;
     Sphere* c = dynamic_cast<Sphere*>(objectList[1]);
     Mesh* m = dynamic_cast<Mesh*>(objectList[8]);
     c->center = t.apply(c->center);
 
     m->apply(rt);
+    m->apply(t);
 
     trace(*globalCam, *globalScene, objectList);
     

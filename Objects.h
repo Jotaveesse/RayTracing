@@ -599,34 +599,43 @@ class Mesh: public Object{
         tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter = {Point(), Vector(), -1};
-
+            
+            Vector normal;
+            tuple<int, int, int> triangle;
+            Point vert0;
+            Point vert1;
+            Point vert2;
+            float NdotRayDir ;
+            float denom;
+            float u;
+            float v;
+            
             for (int i = 0; i < triangles.size(); i++){
-                Vector normal = triNormals[i];
-                tuple<int, int, int> triangle = triangles[i];
-                Point vert0 = vertices[get<0>(triangle)];
-                Point vert1 = vertices[get<1>(triangle)];
-                Point vert2 = vertices[get<2>(triangle)];
-                float NdotRayDirection = normal.dot(dir);
-                float denom = normal.dot(normal);
-                float u;
-                float v;
-                
-                if (fabs(NdotRayDirection) > kEpsilon){
+                normal = triNormals[i];
+                triangle = triangles[i];
+                vert0 = vertices[get<0>(triangle)];
+                vert1 = vertices[get<1>(triangle)];
+                vert2 = vertices[get<2>(triangle)];
+                NdotRayDir = normal.dot(dir);
+                denom = normal.dot(normal);
+
+                //checa se o raio é paralelo ao triangulo
+                if (fabs(NdotRayDir) > kEpsilon){
                     float d = -(normal.x * vert0.x + normal.y * vert0.y + normal.z * vert0.z);
                     
-                    float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDirection;
+                    float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDir;
                     
-                    //se t<0 o triangulo está atras do raio
-                    if (t < 0 || t >= closestDist)
-                        break;
+                    //se t < -kEpsilon o triangulo está atras do raio
+                    if (t < -kEpsilon || t >= closestDist)
+                        continue;
 
                     Point interPoint = origin + dir * t;
 
                     //checa se a face do triangulo está na direção da camera
                     if(backCulling){
                         Vector origInter = (origin - interPoint).normalized();
-                        float dot = origInter.dot(normal.normalized());
-                        if(dot<0) 
+                        float origDotN = origInter.dot(normal.normalized());
+                        if(origDotN<0)
                             continue;
                     }
                     
@@ -637,7 +646,7 @@ class Mesh: public Object{
                     Vector vp0 = interPoint - vert0;
                     interPerp = edge0.cross(vp0);
 
-                    //checa interseção estado do lado certo desta aresta
+                    //checa se interseção esta do lado certo desta aresta
                     if (normal.dot(interPerp) < 0)
                         continue;
 
@@ -645,7 +654,7 @@ class Mesh: public Object{
                     Vector vp1 = interPoint - vert1;
                     interPerp = edge1.cross(vp1);
 
-                    //checa interseção estado do lado certo desta aresta
+                    //checa se interseção esta do lado certo desta aresta
                     if ((u = normal.dot(interPerp)) < 0)
                         continue;
 
@@ -653,7 +662,7 @@ class Mesh: public Object{
                     Vector vp2 = interPoint - vert2;
                     interPerp = edge2.cross(vp2);
 
-                    //checa interseção estado do lado certo desta aresta
+                    //checa se interseção esta do lado certo desta aresta
                     if ((v = normal.dot(interPerp)) < 0)
                         continue;
 
