@@ -36,7 +36,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
             
             float dist = get<2>(inter);
 
-            //se dist < que distLight ponto está entre tela e foco
+            //se dist > distLight ponto esta atras da luz
             if(dist >= kEpsilon && dist < distLight){
                 blocked = true;
                 break;
