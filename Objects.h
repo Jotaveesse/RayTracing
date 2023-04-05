@@ -424,6 +424,10 @@ class Object{
             this->rugCo = rugCo;
         }
 
+        virtual void apply(Transform& t){
+            
+        }
+
         virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
