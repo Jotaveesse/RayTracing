@@ -307,8 +307,8 @@ class Camera{
             this->center = t.apply(this->center);
             this->target = t.apply(this->target);
             this->up = t.apply(this->up);
-            this->orthoW = t.apply(this->orthoW);
-            this->orthoW = t.apply(this->orthoW);
+            this->orthoU = t.apply(this->orthoU);
+            this->orthoV = t.apply(this->orthoV);
             this->orthoW = t.apply(this->orthoW);
         }
 };
@@ -630,7 +630,7 @@ class Mesh: public Object{
                     float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDir;
                     
                     //se t < -kEpsilon o triangulo está atras do raio
-                    if (t < -kEpsilon || t >= closestDist)
+                    if (t < -kEpsilon*5 || t >= closestDist)
                         continue;
 
                     Point interPoint = origin + dir * t;

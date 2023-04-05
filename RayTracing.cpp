@@ -66,11 +66,10 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
     return finalColor;
 }
 
-void trace(Camera cam, Scene scn, vector<Object*> objects, int imageIndex = 0){
-    stringstream filename;
-    filename << "image" << imageIndex << ".ppm";
+void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
+    fileName = fileName + ".ppm";
 
-    ofstream imagePpm(filename.str());
+    ofstream imagePpm(fileName);
 
     imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
 
@@ -344,15 +343,15 @@ int main() {
 
     inputFile.close();
 
-    Vector translate(-10, -10, -10);
+    Vector translate(-10, 0, -10);
     TranslationTransform t(translate);
     RotationTransform rt = RotationTransform(30 , 'y');
 
-    trace(*globalCam, *globalScene, objectList, 0);
+    trace(*globalCam, *globalScene, objectList, "image0");
     globalCam->apply(rt);
-    trace(*globalCam, *globalScene, objectList, 1);
+    trace(*globalCam, *globalScene, objectList, "image1");
     objectList[0]->apply(t);
-    trace(*globalCam, *globalScene, objectList, 2);
+    trace(*globalCam, *globalScene, objectList, "image2");
 
     return 0;
 };
