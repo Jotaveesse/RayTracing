@@ -37,7 +37,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
             float dist = get<2>(inter);
 
             //se dist > distLight ponto esta atras da luz
-            if(dist >= kEpsilon && dist < distLight){
+            if(dist >= kEpsilon && dist + kEpsilon< distLight){
                 blocked = true;
                 break;
             }

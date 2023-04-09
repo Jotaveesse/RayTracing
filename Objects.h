@@ -299,8 +299,8 @@ class Camera{
             this->target = target;
 
             orthoU = (target - center).normalize();
-            orthoV = up.cross(orthoU).normalize();
-            orthoW = orthoU.cross(orthoV);
+            orthoV = orthoU.cross(up).normalize();
+            orthoW = orthoV.cross(orthoU);
         }
 
         void apply(Transform& t){
