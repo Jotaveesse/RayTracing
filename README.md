@@ -1,4 +1,4 @@
 # RayTracing
 Site para converter ppm para png:
 https://paulcuth.me.uk/projects/netpbm-viewer/
-![a](https://user-images.githubusercontent.com/93406483/229834433-243a11e2-6975-4699-9898-a64262abed7c.png)
+![Untitled](https://user-images.githubusercontent.com/93406483/230799515-4f6f75a9-b1eb-48e0-9a77-b3b3fb887b30.png)
