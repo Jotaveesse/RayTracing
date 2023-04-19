@@ -18,15 +18,16 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
 Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector V = (specPoint - interPoint).normalized();
-    Color Ir;
-    Color It;
+    Color refColor;
+    Color tranColor;
 
     count -= 1;
     
     //reflection recursion
     if(obj.refCo != 0 && count>=0){
         Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
-        Ir = intersectRay(scn, objects, reflection, interPoint, count);
+        Color Ir = intersectRay(scn, objects, reflection, interPoint, count);
+        refColor = Ir * obj.refCo;
     }
 
     //refraction recursion
@@ -37,7 +38,8 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         float cosT = sqrt(1.0 - sinT2);
         Vector refraction = (V * n) + normal * (n * cosI - cosT);
 
-        It = intersectRay(scn, objects, refraction, interPoint, count);
+        Color It = intersectRay(scn, objects, refraction, interPoint, count);
+        tranColor = It * obj.tranCo;
     }
 
     for(Light light : scn.lights){
@@ -62,7 +64,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
 
             //se dist > distLight ponto esta atras da luz
             if(dist >= kEpsilon && dist + kEpsilon< distLight){
-                blocked = true;
+                //blocked = true;
                 break;
             }
         }
@@ -85,6 +87,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         }
     }
 
+    finalColor = finalColor + refColor + tranColor;
     finalColor.clamp();
     
     return finalColor;
@@ -142,6 +145,8 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
+            if(i==300 && j == 500)
+                cout << "hi";
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
@@ -402,7 +407,7 @@ int main() {
 
     Vector translate(-10, 0, -10);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(30 , 'y');
+    RotationTransform rt = RotationTransform(20 , 'y');
 
     trace(*globalCam, *globalScene, objectList, "image0");
     globalCam->apply(rt);
