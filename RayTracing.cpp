@@ -8,14 +8,14 @@
 #include "Objects.h"
 
 #define PI 3.14159265
-#define EPSILON 0.001
-#define MAXBOUNCE 5
 
+#define kEpsilon 0.001f
+#define MAXBOUNCE 5
 using namespace std;
 
 Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
 
-Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
+Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector V = (specPoint - interPoint).normalized();
     Color Ir;
@@ -43,24 +43,48 @@ Color phong(Scene scn, vector<Object*> objects, Object obj, Point interPoint, Po
     for(Light light : scn.lights){
         Color diffColor;
         Color specColor;
-        Vector Li = (light.center - interPoint).normalized();
+        Vector Li = (light.center - interPoint);
+        float distLight = Li.length();
+        Li.normalize();
+
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
-        float RiDotV = Ri.dot(V);
-        if(RiDotV < 0)
-            RiDotV = 0;
-
-        //phong
-        diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
-        diffColor.clamp();
-
-        specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
-        specColor.clamp();
         
-        finalColor = finalColor + diffColor + specColor;
-        finalColor.clamp();
+        bool blocked = false;
+
+        //checa se a luz esta bloqueada por algum objeto
+        vector<Object*>::iterator iter;
+        for(iter = objects.begin(); iter != objects.end(); iter++) 
+        {
+            //ponto de interseção
+            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
+            
+            float dist = get<2>(inter);
+
+            //se dist > distLight ponto esta atras da luz
+            if(dist >= kEpsilon && dist + kEpsilon< distLight){
+                blocked = true;
+                break;
+            }
+        }
+
+        if(!blocked){
+            float RiDotV = Ri.dot(V);
+            //impede que RiDotV seja negativo
+            if(RiDotV < 0)
+                RiDotV = 0;
+
+            //phong
+            diffColor = light.color * obj.color * obj.difCo * normal.dot(Li);
+            diffColor.clamp();
+
+            specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
+            specColor.clamp();
+            
+            finalColor = finalColor + diffColor + specColor;
+            finalColor.clamp();
+        }
     }
-    
-    finalColor = finalColor + Ir * obj.refCo + It * obj.tranCo;
+
     finalColor.clamp();
     
     return finalColor;
@@ -81,7 +105,7 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
         float dist = get<2>(inter);
 
         //se dist < que tamanho do pixVector ponto está entre tela e foco
-        if(dist >= EPSILON && dist < closestDist){
+        if(dist >= kEpsilon && dist < closestDist){
             closestDist = dist;
             closestObj = *iter;
             closestInter = inter;
@@ -92,36 +116,60 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
     Color finalColor;
 
     if(closestObj != NULL)
-        finalColor = phong(scn, objects, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
+        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
 
     return finalColor;
 }
 
-void trace(Camera cam, Scene scn, vector<Object*> objects){
-    ofstream imagePpm("image.ppm");
+
+void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
+    fileName = fileName + ".ppm";
+
+    ofstream imagePpm(fileName);
 
     imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
 
-    Vector t = (cam.target - cam.center).normalized();
-    Vector b = cam.up.cross(t).normalized();
-    Vector v = t.cross(b).normalized();
     float fov = 90;
 
     float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
     float gy = gx * cam.height / cam.width;
 
-    Vector pixWidth = (b * 2 * gx)/(cam.width-1);
-    Vector pixHeight = (v * 2 * gy)/(cam.height-1);
+    Vector pixWidth = (cam.orthoV * 2 * gx)/(cam.width-1);
+    Vector pixHeight = (cam.orthoW * 2 * gy)/(cam.height-1);
 
     //pixel no canto superior esquerdo
-    Vector firstPix = t * cam.distScreen - b * gx + v * gy;
+    Vector firstPix = cam.orthoU * cam.distScreen - cam.orthoV * gx + cam.orthoW * gy;
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
+            float closestDist = numeric_limits<float>::infinity();
+            tuple<Point, Vector, float> closestInter;
+            Object* closestObj = NULL;
+
+            //itera sobre todos os objetos
+            vector<Object*>::iterator iter;
+            for(iter = objects.begin(); iter != objects.end(); iter++) 
+            {
+                //ponto de interseção
+                tuple<Point, Vector, float> inter = (*iter)->intersect(cam.center, pixVector);
+                
+                float dist = get<2>(inter);
+
+                //se dist < que tamanho do pixVector ponto está entre tela e foco
+                if(dist >= pixVector.length() && dist < closestDist){
+                    closestDist = dist;
+                    closestObj = *iter;
+                    closestInter = inter;
+                }
+            }
+            
+            Color finalColor;
+
+            if(closestObj != NULL)
+                finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
@@ -352,7 +400,15 @@ int main() {
 
     inputFile.close();
 
-    trace(*globalCam, *globalScene, objectList);
+    Vector translate(-10, 0, -10);
+    TranslationTransform t(translate);
+    RotationTransform rt = RotationTransform(30 , 'y');
+
+    trace(*globalCam, *globalScene, objectList, "image0");
+    globalCam->apply(rt);
+    trace(*globalCam, *globalScene, objectList, "image1");
+    objectList[0]->apply(t);
+    trace(*globalCam, *globalScene, objectList, "image2");
 
     return 0;
 };
