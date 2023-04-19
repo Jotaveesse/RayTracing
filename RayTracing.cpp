@@ -11,6 +11,8 @@
 
 #define kEpsilon 0.001f
 #define MAXBOUNCE 5
+#define REFINDEX 0.6
+
 using namespace std;
 
 Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
@@ -23,23 +25,24 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
 
     count -= 1;
     
-    //reflection recursion
+    //recursão de reflexão
     if(obj.refCo != 0 && count>=0){
         Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
         Color Ir = intersectRay(scn, objects, reflection, interPoint, count);
         refColor = Ir * obj.refCo;
+        refColor.clamp();
     }
 
-    //refraction recursion
+    //recursão de refração
     if(obj.tranCo != 0 && count>=0){
-        float n = 0.3;
         float cosI = -normal.dot(V);
-        float sinT2 = n * n * (1.0 - cosI * cosI);
+        float sinT2 = REFINDEX * REFINDEX * (1.0 - cosI * cosI);
         float cosT = sqrt(1.0 - sinT2);
-        Vector refraction = (V * n) + normal * (n * cosI - cosT);
+        Vector refraction = (V * REFINDEX) + normal * (REFINDEX * cosI - cosT);
 
         Color It = intersectRay(scn, objects, refraction, interPoint, count);
         tranColor = It * obj.tranCo;
+        tranColor.clamp();
     }
 
     for(Light light : scn.lights){
@@ -57,6 +60,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         vector<Object*>::iterator iter;
         for(iter = objects.begin(); iter != objects.end(); iter++) 
         {
+            break;
             //ponto de interseção
             tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
             
@@ -64,7 +68,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
 
             //se dist > distLight ponto esta atras da luz
             if(dist >= kEpsilon && dist + kEpsilon< distLight){
-                //blocked = true;
+                blocked = true;
                 break;
             }
         }
@@ -145,36 +149,11 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
 
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
-            if(i==300 && j == 500)
-                cout << "hi";
+            
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
-            float closestDist = numeric_limits<float>::infinity();
-            tuple<Point, Vector, float> closestInter;
-            Object* closestObj = NULL;
-
-            //itera sobre todos os objetos
-            vector<Object*>::iterator iter;
-            for(iter = objects.begin(); iter != objects.end(); iter++) 
-            {
-                //ponto de interseção
-                tuple<Point, Vector, float> inter = (*iter)->intersect(cam.center, pixVector);
-                
-                float dist = get<2>(inter);
-
-                //se dist < que tamanho do pixVector ponto está entre tela e foco
-                if(dist >= pixVector.length() && dist < closestDist){
-                    closestDist = dist;
-                    closestObj = *iter;
-                    closestInter = inter;
-                }
-            }
-            
-            Color finalColor;
-
-            if(closestObj != NULL)
-                finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
@@ -407,13 +386,13 @@ int main() {
 
     Vector translate(-10, 0, -10);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(20 , 'y');
+    RotationTransform rt = RotationTransform(-40 , 'y');
 
     trace(*globalCam, *globalScene, objectList, "image0");
     globalCam->apply(rt);
     trace(*globalCam, *globalScene, objectList, "image1");
     objectList[0]->apply(t);
     trace(*globalCam, *globalScene, objectList, "image2");
-
+    
     return 0;
 };
