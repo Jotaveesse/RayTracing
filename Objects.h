@@ -523,7 +523,11 @@ class Plane: public virtual Object{
                 float t = v.dot(normal) / denom;
                 if(t >= 0){
                     Point inters = origin + (dir * t);
-                    return tuple<Point, Vector, float>{inters, normal, t};
+                    
+                    if(normal.dot(dir)<0)
+                        return tuple<Point, Vector, float>{inters, normal, t};
+                    else
+                        return tuple<Point, Vector, float>{inters, normal * -1, t};
                 }
             }
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
