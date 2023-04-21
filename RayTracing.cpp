@@ -11,7 +11,8 @@
 
 #define kEpsilon 0.001f
 #define MAXBOUNCE 5
-#define REFINDEX 0.6
+#define ENV_REFINDEX 1
+#define OBJ_REFINDEX 2000
 
 using namespace std;
 
@@ -35,10 +36,16 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
 
     //recursão de refração
     if(obj.tranCo != 0 && count>=0){
-        float cosI = -normal.dot(V);
-        float sinT2 = REFINDEX * REFINDEX * (1.0 - cosI * cosI);
-        float cosT = sqrt(1.0 - sinT2);
-        Vector refraction = (V * REFINDEX) + normal * (REFINDEX * cosI - cosT);
+        float cos = V.dot(normal);
+        Vector projVOnNormal = normal*cos;
+        Vector sinVector = V - projVOnNormal;
+        float sinRay = sinVector.length();
+        Vector normalizedSinVector = sinVector.normalized();
+
+        float sinRef = ENV_REFINDEX*sinRay/OBJ_REFINDEX;
+        float cosRef = 1 - (sinRef*sinRef);
+        
+        Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
 
         Color It = intersectRay(scn, objects, refraction, interPoint, count);
         tranColor = It * obj.tranCo;
