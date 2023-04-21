@@ -384,13 +384,18 @@ int main() {
 
     inputFile.close();
 
-    Vector translate(-10, 0, -10);
+    Vector translate(-20, 0, 0);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(-40 , 'y');
+    RotationTransform rt = RotationTransform(100 , 'z');
+
+    //rotate cam around 10 0 0
+    Point rotCenter(10, 0, 0);
+    TranslationTransform translCenter(rotCenter);
+    Transform rotation = translCenter.inverse()*rt*translCenter;
 
     trace(*globalCam, *globalScene, objectList, "image0");
-    globalCam->apply(rt);
-    trace(*globalCam, *globalScene, objectList, "image1");
+    // globalCam->apply(rotation);
+    // trace(*globalCam, *globalScene, objectList, "image1");
     objectList[0]->apply(t);
     trace(*globalCam, *globalScene, objectList, "image2");
     
