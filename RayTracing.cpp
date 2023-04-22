@@ -221,6 +221,41 @@ Plane* extractPlane(vector<string> valueArr){
     return pln;
 }
 
+Paraboloid* extractParaboloid(vector<string> valueArr){
+    Point focus(
+        stof(valueArr[1]),
+        stof(valueArr[2]),
+        stof(valueArr[3]));
+
+    Point planePoint(
+        stof(valueArr[4]),
+        stof(valueArr[5]),
+        stof(valueArr[6]));
+    
+    Vector normal(
+        stof(valueArr[7]),
+        stof(valueArr[8]),
+        stof(valueArr[9]));
+
+    Color col(
+        stof(valueArr[10]),
+        stof(valueArr[11]),
+        stof(valueArr[12]));
+    col.normalize();
+
+    float difCo = stof(valueArr[13]);
+    float espCo = stof(valueArr[14]);
+    float ambCo = stof(valueArr[15]);
+    float refCo = stof(valueArr[16]);
+    float tranCo = stof(valueArr[17]);
+    float rugCo = stof(valueArr[18]);
+
+    Paraboloid* prbl = new Paraboloid(focus, planePoint, normal, col,
+        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+    
+    return prbl;
+}
+
 Camera* extractCamera(vector<string> valueArr){
     int width = stoi(valueArr[1]);
     int height = stoi(valueArr[2]);
@@ -286,6 +321,10 @@ int main() {
         //plano
         else if(valueArr[0] == "p"){
             objectList.push_back(extractPlane(valueArr));
+        }
+        //paraboloide
+        else if(valueArr[0] == "b"){
+            objectList.push_back(extractParaboloid(valueArr));
         }
         //malha
         else if(valueArr[0] == "t"){

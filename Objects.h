@@ -275,7 +275,6 @@ class Transform{
 
 
 class Camera{
-    
     public:
         Point center;
         Point target;
@@ -530,6 +529,78 @@ class Plane: public virtual Object{
                         return tuple<Point, Vector, float>{inters, normal * -1, t};
                 }
             }
+            return tuple<Point, Vector, float>{Point(), Vector(), -1};
+        }
+};
+
+class Paraboloid: public virtual Object{
+    public:
+        Point focus;
+        Point planePoint;
+        Vector planeNormal;
+
+        Paraboloid(Point focus, Point planePoint, Vector planeNormal, Color color, float difCo,
+        float espCo, float ambCo, float refCo, float tranCo, float rugCo):
+        Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
+            this->focus = focus;
+            this->planePoint = planePoint;
+            this->planeNormal = planeNormal.normalized();
+            this->color = color;
+            this->difCo = difCo;
+            this->espCo = espCo;
+            this->ambCo = ambCo;
+            this->refCo = refCo;
+            this->tranCo = tranCo;
+            this->rugCo = rugCo;
+        }
+
+        void apply(Transform& t){
+            focus = t.apply(focus);
+            planePoint = t.apply(planePoint);
+            planeNormal = t.apply(planeNormal);
+        }
+
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
+            dir.normalize();
+
+            float d = - (planeNormal.x * planePoint.x + planeNormal.y * planePoint.y + planeNormal.z * planePoint.z); //dot product?
+            float r = planeNormal.sqrdLength();
+            float s = planeNormal.x * origin.x + planeNormal.y * origin.y + planeNormal.z * origin.z + d; //dot?
+            float t = planeNormal.x * dir.x + planeNormal.y * dir.y + planeNormal.z * dir.z;
+            float u = origin.x - focus.x;
+            float v = origin.y - focus.y;
+            float w = origin.z - focus.z;
+
+            float bhaskaraA = pow(t , 2) - pow(dir.x , 2) * r - pow(dir.y , 2) * r - pow(dir.z , 2) * r;
+            float bhaskaraB = 2 * t * s - 2 * dir.x * u - 2 * dir.y * v - 2 * dir.z * w;
+            float bhaskaraC = pow(s , 2) - pow(u , 2) * r - pow(v , 2) * r - pow(w , 2) * r;
+
+            float delta = pow(bhaskaraB , 2) - 4 * bhaskaraA * bhaskaraC;
+
+            if(delta >= 0){
+                float dist1 = (-bhaskaraB + sqrt(delta)) / (2 * bhaskaraA);
+                float dist2 = (-bhaskaraB - sqrt(delta)) / (2 * bhaskaraA);
+                
+                if(dist1 > 0 || dist2 > 0){
+                    if (dist1 < dist2){
+                        Point inters = origin + (dir * dist1);
+                        Vector focusInters = inters - focus;
+                        Vector intersPlane = planeNormal.normalized() * -focusInters.length();
+                        Vector normal = (focusInters + intersPlane).normalized();
+                        
+                        return tuple<Point, Vector, float>{inters, normal, dist1};
+                    }
+                    else{
+                        Point inters = origin + (dir * dist2);
+                        Vector focusInters = inters - focus;
+                        Vector intersPlane = planeNormal.normalized() * -focusInters.length();
+                        Vector normal = (focusInters + intersPlane).normalized();
+                        
+                        return tuple<Point, Vector, float>{inters, normal, dist2};
+                    }
+                }
+            }
+
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
 };
