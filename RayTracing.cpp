@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 #include <tuple>
+#include <omp.h>
 #include "Objects.h"
 
 #define PI 3.14159265
@@ -141,6 +142,8 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
 
 
 void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
+    vector<vector<vector<int>>> pixels(cam.height, vector<vector<int>>(cam.width, vector<int>(3, 0)));
+
     fileName = fileName + ".ppm";
 
     ofstream imagePpm(fileName);
@@ -158,6 +161,7 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
     //pixel no canto superior esquerdo
     Vector firstPix = cam.orthoU * cam.distScreen - cam.orthoV * gx + cam.orthoW * gy;
 
+    #pragma omp parallel for
     for(int i=0; i<cam.height;i++){
         for(int j=0; j<cam.width;j++){
             
@@ -166,9 +170,17 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
 
             Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
-            imagePpm << (int)(finalColor.R*255) << " ";
-            imagePpm << (int)(finalColor.G*255) << " ";
-            imagePpm << (int)(finalColor.B*255) << " ";
+            pixels[i][j][0] = (int)(finalColor.R*255);
+            pixels[i][j][1] = (int)(finalColor.G*255);
+            pixels[i][j][2] = (int)(finalColor.B*255);
+        }
+    }
+
+    for(int i=0; i<cam.height;i++){
+        for(int j=0; j<cam.width;j++){
+            imagePpm << pixels[i][j][0] << " ";
+            imagePpm << pixels[i][j][1] << " ";
+            imagePpm << pixels[i][j][2] << " ";
         }
         imagePpm << "\n";
     }
