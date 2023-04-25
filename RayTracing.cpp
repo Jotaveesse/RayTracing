@@ -12,7 +12,7 @@
 #define kEpsilon 0.001f
 #define MAXBOUNCE 5
 #define ENV_REFINDEX 1
-#define OBJ_REFINDEX 2000
+#define OBJ_REFINDEX 1.5
 
 using namespace std;
 
@@ -43,6 +43,10 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         Vector normalizedSinVector = sinVector.normalized();
 
         float sinRef = ENV_REFINDEX*sinRay/OBJ_REFINDEX;
+        
+        if(abs(sinRef) > 1)
+            sinRef = sinRef > 0 ? 1 : -1;
+
         float cosRef = 1 - (sinRef*sinRef);
         
         Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
