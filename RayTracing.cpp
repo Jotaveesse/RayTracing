@@ -18,7 +18,7 @@ using namespace std;
 
 Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count, bool insideObj);
 
-Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count, bool insideObj){
+Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, Point specPoint, Vector normal, int count, bool insideObj){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector V = (specPoint - interPoint).normalized();
     Color refColor;
@@ -54,7 +54,9 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         
         Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
 
-        Color It = intersectRay(scn, objects, refraction, interPoint, count, !insideObj);
+        Color It = intersectRay(scn, objects, refraction, interPoint, count, 
+            (obj.hasInterior() && !insideObj)
+        );
         tranColor = It * obj.tranCo;
         tranColor.clamp();
     }
