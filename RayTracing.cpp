@@ -16,9 +16,9 @@
 
 using namespace std;
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count, bool insideObj);
 
-Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
+Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count, bool insideObj){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector V = (specPoint - interPoint).normalized();
     Color refColor;
@@ -29,7 +29,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
     //recursão de reflexão
     if(obj.refCo != 0 && count>=0){
         Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
-        Color Ir = intersectRay(scn, objects, reflection, interPoint, count);
+        Color Ir = intersectRay(scn, objects, reflection, interPoint, count, insideObj);
         refColor = Ir * obj.refCo;
         refColor.clamp();
     }
@@ -44,6 +44,9 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
 
         float sinRef = ENV_REFINDEX*sinRay/OBJ_REFINDEX;
         
+        if(insideObj)
+            sinRef = OBJ_REFINDEX*sinRay/ENV_REFINDEX;
+        
         if(abs(sinRef) > 1)
             sinRef = sinRef > 0 ? 1 : -1;
 
@@ -51,7 +54,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
         
         Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
 
-        Color It = intersectRay(scn, objects, refraction, interPoint, count);
+        Color It = intersectRay(scn, objects, refraction, interPoint, count, !insideObj);
         tranColor = It * obj.tranCo;
         tranColor.clamp();
     }
@@ -108,7 +111,7 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
     return finalColor;
 }
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count){
+Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count, bool insideObj){
     float closestDist = numeric_limits<float>::infinity();
     tuple<Point, Vector, float> closestInter;
     Object* closestObj = NULL;
@@ -134,7 +137,7 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
     Color finalColor;
 
     if(closestObj != NULL)
-        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
+        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count, insideObj);
 
     return finalColor;
 }
@@ -397,17 +400,17 @@ int main() {
 
     Vector translate(-20, 0, 0);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(100 , 'z');
+    RotationTransform rt = RotationTransform(33 , 'z');
 
     //rotate cam around 10 0 0
-    Point rotCenter(10, 0, 0);
+    Point rotCenter(80, 4, 0);
     TranslationTransform translCenter(rotCenter);
-    Transform rotation = translCenter.inverse()*rt*translCenter;
+    Transform rotation = t*translCenter.inverse()*rt*translCenter;
 
     trace(*globalCam, *globalScene, objectList, "image0");
-    // globalCam->apply(rotation);
-    // trace(*globalCam, *globalScene, objectList, "image1");
     objectList[0]->apply(t);
+    trace(*globalCam, *globalScene, objectList, "image1");
+    globalCam->apply(rotation);
     trace(*globalCam, *globalScene, objectList, "image2");
     
     return 0;
