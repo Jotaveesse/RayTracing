@@ -17,9 +17,9 @@
 
 using namespace std;
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count, bool insideObj);
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int count, bool insideObj);
 
-Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, Point specPoint, Vector normal, int count, bool insideObj){
+Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int count, bool insideObj){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector V = (specPoint - interPoint).normalized();
     Color refColor;
@@ -114,7 +114,7 @@ Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, 
     return finalColor;
 }
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count, bool insideObj){
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int count, bool insideObj){
     float closestDist = numeric_limits<float>::infinity();
     tuple<Point, Vector, float> closestInter;
     Object* closestObj = NULL;
@@ -146,7 +146,7 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
 }
 
 
-void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
+void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
     vector<vector<vector<int>>> pixels(cam.height, vector<vector<int>>(cam.width, vector<int>(3, 0)));
 
     fileName = fileName + ".ppm";
