@@ -169,7 +169,7 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE, false);
 
             imagePpm << (int)(finalColor.R*255) << " ";
             imagePpm << (int)(finalColor.G*255) << " ";
