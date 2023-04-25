@@ -428,6 +428,10 @@ class Object{
             
         }
 
+        virtual const bool hasInterior(){
+            return false;
+        }
+
         virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
@@ -454,6 +458,10 @@ class Sphere: public virtual Object{
 
         void apply(Transform& t){
             center = t.apply(center);
+        }
+
+        const bool hasInterior(){
+            return true;
         }
 
         tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
