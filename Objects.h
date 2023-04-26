@@ -409,19 +409,21 @@ class Object{
         float difCo;
         float espCo;
         float ambCo;
-        float refCo;
+        float reflCo;
         float tranCo;
         float rugCo;
+        float refrInd;
 
         explicit Object(Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo){
+        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd){
             this->color = color;
             this->difCo = difCo;
             this->espCo = espCo;
             this->ambCo = ambCo;
-            this->refCo = refCo;
+            this->reflCo = reflCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+            this->refrInd = refrInd;
         }
 
         virtual void apply(Transform& t){
@@ -443,17 +445,18 @@ class Sphere: public virtual Object{
         float radius;
         
         Sphere(Point center, float radius, Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo):
-        Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
+        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
+        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
             this->center = center;
             this->radius = radius;
             this->color = color;
             this->difCo = difCo;
             this->espCo = espCo;
             this->ambCo = ambCo;
-            this->refCo = refCo;
+            this->reflCo = reflCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+            this->refrInd = refrInd;
         }
 
         void apply(Transform& t){
@@ -504,17 +507,18 @@ class Plane: public virtual Object{
         Vector normal;
 
         Plane(Point point, Vector normal, Color color, float difCo,
-        float espCo, float ambCo, float refCo, float tranCo, float rugCo):
-        Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
+        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
+        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
             this->point = point;
             this->normal = normal;
             this->color = color;
             this->difCo = difCo;
             this->espCo = espCo;
             this->ambCo = ambCo;
-            this->refCo = refCo;
+            this->reflCo = reflCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+            this->refrInd = refrInd;
         }
 
         void apply(Transform& t){
@@ -553,8 +557,8 @@ class Mesh: public Object{
 
         Mesh(int triCount, int vertCount, vector<Point> vertices,
         vector<tuple<int, int, int>> triangles, Color color, float difCo, float espCo,
-        float ambCo, float refCo, float tranCo, float rugCo):
-        Object(color, difCo, espCo, ambCo, refCo, tranCo, rugCo){
+        float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
+        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
             this->triCount = triCount;
             this->vertCount = vertCount;
             this->vertices = vertices;
@@ -563,9 +567,10 @@ class Mesh: public Object{
             this->difCo = difCo;
             this->espCo = espCo;
             this->ambCo = ambCo;
-            this->refCo = refCo;
+            this->reflCo = reflCo;
             this->tranCo = tranCo;
             this->rugCo = rugCo;
+            this->refrInd = refrInd;
 
             getNormals();
         }

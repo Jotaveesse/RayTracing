@@ -1,12 +1,12 @@
-s 0 15 0 8 255 255 255 0.4 0.4 1 1 0 5
-s 14 4 8 4 255 255 0 1 1 1 0 0 2
-s -15 7 6 5 0 0 0 1 1 1 0 1 5
-s 50 10 25 4 255 255 255 1 1 1 0 0 5
-p 0 0 0 0 1 0 255 0 0 1 1 1 0 0 5
-p 0 0 -10 0 0 1 255 255 255 0 0 0.5 0.1 0 3
-p -40 0 0 1 0 0 255 255 0 1 0.5 0.5 0 0 3
-p 40 0 0 -1 0 0 0 0 255 0.2 0.1 0.1 0 1 3
-p 42 0 0 -1 0 0 0 0 255 0.2 0.1 0.1 0 1 3
+s 0 15 0 8 255 255 255 0.4 0.4 1 1 0 5 2
+s 14 4 8 4 255 255 0 0.5 1 1 0 1 6 1
+s -15 7 6 5 0 0 0 1 1 1 0 1 5 2
+s 50 10 25 4 255 255 255 1 1 1 0 0 5 2
+p 0 0 0 0 1 0 255 0 0 1 1 1 0 0 5 2
+p 0 0 -10 0 0 1 255 255 255 0 0 0.5 0.1 0 3 2
+p -40 0 0 1 0 0 255 255 0 1 0.5 0.5 0 0 3 2
+p 40 0 0 -1 0 0 0 0 255 0.2 0.1 0.1 0 1 3 2
+p 42 0 0 -1 0 0 0 0 255 0.2 0.1 0.1 0 1 3 2
 t 4 6
 0 16 10
 -9 8 18
@@ -18,8 +18,33 @@ t 4 6
 2 4 3
 2 5 4
 3 4 6
-0 0 0 1 0.6 1 0.6 0 20
+0 0 0 1 0.6 1 0.6 0 20 2
 c 1000 800 1 0 1 0 0 10 35 0 5 0
 l 0 30 10 255 255 255
 l 40 10 0 100 100 0
 a 10 10 10
+
+/TEMPLATES
+
+/ESFERA
+/s centerX centerY centerZ radius colorR colorG colorB dif spec amb trans refl rug refr
+
+/PLANO
+/p pointX pointY pointZ normalX normalY normalZ colorR colorG colorB dif spec amb trans refl rug refr
+
+/MALHA DE TRIÂNGULOS
+/t triCount vertCount
+/vert1X vert1Y vert1Z
+/vert2X vert2Y vert2Z
+/vert3X vert3Y vert3Z
+/vertInd1 vertInd2 vertInd3
+/colorR colorG colorB dif spec amb trans refl rug refr
+
+/CAMERA
+/c width height distScreen upX upY upZ centerX centerY centerZ focusX focusY focusZ
+
+/LUZ
+/l centerX centerY centerZ colorR colorG colorB
+
+/AMBIENTE
+/a colorR colorG colorB
