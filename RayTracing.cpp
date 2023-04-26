@@ -69,13 +69,12 @@ Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, 
 
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
         
-        bool blocked = false;
+        float transBlock = 1;
 
         //checa se a luz esta bloqueada por algum objeto
         vector<Object*>::iterator iter;
         for(iter = objects.begin(); iter != objects.end(); iter++) 
         {
-            break;
             //ponto de interseção
             tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
             
@@ -83,12 +82,12 @@ Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, 
 
             //se dist > distLight ponto esta atras da luz
             if(dist >= kEpsilon && dist + kEpsilon< distLight){
-                blocked = true;
+                transBlock = (*iter)->tranCo;
                 break;
             }
         }
 
-        if(!blocked){
+        if(transBlock != 0){
             float RiDotV = Ri.dot(interSpectVec);
             //impede que RiDotV seja negativo
             if(RiDotV < 0)
@@ -103,6 +102,8 @@ Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, 
             
             finalColor = finalColor + diffColor + specColor;
             finalColor.clamp();
+
+            finalColor = finalColor * transBlock;
         }
     }
 
