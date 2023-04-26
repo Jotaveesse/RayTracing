@@ -13,7 +13,6 @@
 #define kEpsilon 0.001f
 #define MAXBOUNCE 5
 #define ENV_REFINDEX 1
-#define OBJ_REFINDEX 2
 
 using namespace std;
 
@@ -21,39 +20,39 @@ Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& ori
 
 Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int count, bool insideObj){
     Color finalColor = scn.ambient * obj.ambCo;
-    Vector V = (specPoint - interPoint).normalized();
-    Color refColor;
+    Vector interSpectVec = (specPoint - interPoint).normalized();
+    Color reflColor;
     Color tranColor;
 
     count -= 1;
     
     //recursão de reflexão
-    if(obj.refCo != 0 && count>=0){
-        Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
+    if(obj.reflCo != 0 && count>=0){
+        Vector reflection = ((normal * 2 * interSpectVec.dot(normal)) - interSpectVec).normalized();
         Color Ir = intersectRay(scn, objects, reflection, interPoint, count, insideObj);
-        refColor = Ir * obj.refCo;
-        refColor.clamp();
+        reflColor = Ir * obj.reflCo;
+        reflColor.clamp();
     }
 
     //recursão de refração
     if(obj.tranCo != 0 && count>=0){
-        float cos = V.dot(normal);
+        float cos = interSpectVec.dot(normal);
         Vector projVOnNormal = normal*cos;
-        Vector sinVector = V - projVOnNormal;
+        Vector sinVector = interSpectVec - projVOnNormal;
         float sinRay = sinVector.length();
         Vector normalizedSinVector = sinVector.normalized();
 
-        float sinRef = ENV_REFINDEX*sinRay/OBJ_REFINDEX;
+        float sinRef = ENV_REFINDEX*sinRay/obj.refrInd;
         
         if(insideObj)
-            sinRef = OBJ_REFINDEX*sinRay/ENV_REFINDEX;
+            sinRef = obj.refrInd*sinRay/ENV_REFINDEX;
         
         if(abs(sinRef) > 1)
             sinRef = sinRef > 0 ? 1 : -1;
 
-        float cosRef = 1 - (sinRef*sinRef);
+        float cosRef = sqrt(1 - (sinRef*sinRef));
         
-        Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
+        Vector refraction = (normal*cosRef + normalizedSinVector*sinRef) * -1;
 
         Color It = intersectRay(scn, objects, refraction, interPoint, count, 
             (obj.hasInterior() && !insideObj)
@@ -91,7 +90,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
         }
 
         if(!blocked){
-            float RiDotV = Ri.dot(V);
+            float RiDotV = Ri.dot(interSpectVec);
             //impede que RiDotV seja negativo
             if(RiDotV < 0)
                 RiDotV = 0;
@@ -108,7 +107,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
         }
     }
 
-    finalColor = finalColor + refColor + tranColor;
+    finalColor = finalColor + reflColor + tranColor;
     finalColor.clamp();
     
     return finalColor;
@@ -209,12 +208,13 @@ Sphere* extractSphere(vector<string> valueArr){
     float difCo = stof(valueArr[8]);
     float espCo = stof(valueArr[9]);
     float ambCo = stof(valueArr[10]);
-    float refCo = stof(valueArr[11]);
+    float reflCo = stof(valueArr[11]);
     float tranCo = stof(valueArr[12]);
     float rugCo = stof(valueArr[13]);
+    float refrInd = stof(valueArr[14]);
 
     Sphere* sph= new Sphere(center, radius, col,
-        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+        difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
 
     return sph;
 }
@@ -239,12 +239,13 @@ Plane* extractPlane(vector<string> valueArr){
     float difCo = stof(valueArr[10]);
     float espCo = stof(valueArr[11]);
     float ambCo = stof(valueArr[12]);
-    float refCo = stof(valueArr[13]);
+    float reflCo = stof(valueArr[13]);
     float tranCo = stof(valueArr[14]);
     float rugCo = stof(valueArr[15]);
+    float refrInd = stof(valueArr[16]);
 
     Plane* pln = new Plane(p, normal, col,
-        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+        difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
     
     return pln;
 }
@@ -297,7 +298,7 @@ int main() {
 
     ifstream inputFile("input.txt");
 
-    //itera o arquivo, linha pro linha
+    //itera o arquivo, linha por linha
     while (getline(inputFile, line)) {
         valueArr.clear();
         stringstream streamLine(line);
@@ -306,6 +307,10 @@ int main() {
         while (getline(streamLine, value, ' ')) {
             valueArr.push_back(value);
         }
+        
+        //caso seja uma linha vazia
+        if(valueArr.size() == 0)
+            continue;
 
         //esfera
         if(valueArr[0] == "s"){
@@ -382,12 +387,13 @@ int main() {
             float difCo = stof(valueArr[3]);
             float espCo = stof(valueArr[4]);
             float ambCo = stof(valueArr[5]);
-            float refCo = stof(valueArr[6]);
+            float reflCo = stof(valueArr[6]);
             float tranCo = stof(valueArr[7]);
             float rugCo = stof(valueArr[8]);
+            float refrInd = stof(valueArr[9]);
 
             Mesh* mesh = new Mesh(triCount, vertCount, vertices, triangles, col,
-                difCo, espCo, ambCo, refCo, tranCo, rugCo);
+                difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
 
             objectList.push_back(mesh);
         }
