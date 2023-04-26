@@ -49,9 +49,9 @@ Color phong( vector<Object*> objects, Scene scn, Object& obj, Point interPoint, 
         if(abs(sinRef) > 1)
             sinRef = sinRef > 0 ? 1 : -1;
 
-        float cosRef = 1 - (sinRef*sinRef);
+        float cosRef = sqrt(1 - (sinRef*sinRef));
         
-        Vector refraction = Vector(0, 0, 0) - (normal*cosRef) - (normalizedSinVector*sinRef);
+        Vector refraction = (normal*cosRef + normalizedSinVector*sinRef) * -1;
 
         Color It = intersectRay(scn, objects, refraction, interPoint, count, 
             (obj.hasInterior() && !insideObj)

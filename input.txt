@@ -27,10 +27,10 @@ a 10 10 10
 /TEMPLATES
 
 /ESFERA
-/s centerX centerY centerZ radius colorR colorG colorB dif spec amb trans refl rug refr
+/s centerX centerY centerZ radius colorR colorG colorB dif spec amb refl trans rug refr
 
 /PLANO
-/p pointX pointY pointZ normalX normalY normalZ colorR colorG colorB dif spec amb trans refl rug refr
+/p pointX pointY pointZ normalX normalY normalZ colorR colorG colorB dif spec amb refl trans rug refr
 
 /MALHA DE TRIÂNGULOS
 /t triCount vertCount
@@ -38,7 +38,7 @@ a 10 10 10
 /vert2X vert2Y vert2Z
 /vert3X vert3Y vert3Z
 /vertInd1 vertInd2 vertInd3
-/colorR colorG colorB dif spec amb trans refl rug refr
+/colorR colorG colorB dif spec amb refl trans rug refr
 
 /CAMERA
 /c width height distScreen upX upY upZ centerX centerY centerZ focusX focusY focusZ
