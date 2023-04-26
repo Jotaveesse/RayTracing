@@ -13,7 +13,7 @@
 #define kEpsilon 0.001f
 #define MAXBOUNCE 5
 #define ENV_REFINDEX 1
-#define OBJ_REFINDEX 1.5
+#define OBJ_REFINDEX 2
 
 using namespace std;
 
@@ -412,19 +412,14 @@ int main() {
 
     inputFile.close();
 
-    Vector translate(-20, 0, 0);
+    Vector translate(-10, 0, -10);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(33 , 'z');
-
-    //rotate cam around 10 0 0
-    Point rotCenter(80, 4, 0);
-    TranslationTransform translCenter(rotCenter);
-    Transform rotation = t*translCenter.inverse()*rt*translCenter;
+    RotationTransform rt = RotationTransform(-50 , 'y');
 
     trace(*globalCam, *globalScene, objectList, "image0");
-    objectList[0]->apply(t);
+    globalCam->apply(rt);
     trace(*globalCam, *globalScene, objectList, "image1");
-    globalCam->apply(rotation);
+    objectList[0]->apply(t);
     trace(*globalCam, *globalScene, objectList, "image2");
     
     return 0;
