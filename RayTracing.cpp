@@ -79,7 +79,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
         for(iter = objects.begin(); iter != objects.end(); iter++) 
         {
             //ponto de interseção
-            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
+            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li);
             
             float dist = get<2>(inter);
 
@@ -92,6 +92,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
                     break;
             }
         }
+        
 
         if(lightPassed > kEpsilon){
             float RiDotV = Ri.dot(interSpectVec);

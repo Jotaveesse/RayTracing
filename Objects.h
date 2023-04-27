@@ -434,7 +434,7 @@ class Object{
             return false;
         }
 
-        virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
+        virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             return tuple<Point, Vector, float>{Point(), Vector(), -1};
         }
 };
@@ -467,7 +467,7 @@ class Sphere: public virtual Object{
             return true;
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             Vector L = center - origin;
             float lengthL = L.length();
             dir.normalize();
@@ -526,7 +526,7 @@ class Plane: public virtual Object{
             normal = t.apply(normal);
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             dir.normalize();
             float denom = normal.dot(dir);
 
@@ -617,7 +617,7 @@ class Mesh: public Object{
             }
         }
 
-        tuple<Point, Vector, float> intersect(Point origin, Vector dir, bool backCulling = true){
+        tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter = {Point(), Vector(), -1};
             
@@ -651,14 +651,6 @@ class Mesh: public Object{
                         continue;
 
                     Point interPoint = origin + dir * t;
-
-                    //checa se a face do triangulo está na direção da camera
-                    if(backCulling){
-                        Vector origInter = (origin - interPoint).normalized();
-                        float origDotN = origInter.dot(normal.normalized());
-                        if(origDotN<0)
-                            continue;
-                    }
                     
                     //vetor perpendicular ao plano do triangulo
                     Vector interPerp;
@@ -695,9 +687,15 @@ class Mesh: public Object{
                     v /= denom;
 
                     //interpola as normais dos vetores
-                    Vector hitNormal = vNormal0 * u + vNormal1 * v + vNormal2 * (1 - u - v); 
-                    
-                    closestInter = {interPoint, hitNormal.normalized(), t};
+                    Vector hitNormal = (vNormal0 * u + vNormal1 * v + vNormal2 * (1 - u - v)).normalized(); 
+
+                    Vector origInter = (origin - interPoint).normalized();
+                    float cosNormalOrig = origInter.dot(normal.normalized());
+
+                    if(cosNormalOrig<0)
+                        closestInter = {interPoint, hitNormal * -1, t};
+                    else
+                        closestInter = {interPoint, hitNormal, t};
                     closestDist = t;
                 }
                     
