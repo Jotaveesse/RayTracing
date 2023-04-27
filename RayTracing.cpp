@@ -8,18 +8,20 @@
 #include <omp.h>
 #include "Objects.h"
 
-#define PI 3.14159265
-
-#define kEpsilon 0.001f
-#define MAXBOUNCE 5
+#define PI 3.14159265f
+#define EPSILON 0.001f
+#define MAXBOUNCE 7
 #define ENV_REFINDEX 1
 #define FOV 90
+#define SHADOWS true
+#define REFLECTION true
+#define REFRACTION true
 
 using namespace std;
 
-Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount, bool insideObj);
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount);
 
-Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int bounceCount, bool insideObj){
+Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int bounceCount){
     Color finalColor = scn.ambient * obj.ambCo;
     Vector interSpectVec = (specPoint - interPoint).normalized();
     Color reflColor;
@@ -28,38 +30,22 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
     bounceCount -= 1;
     
     //recursão de reflexão
-    if(obj.reflCo != 0 && bounceCount>=0){
-        Vector reflection = ((normal * 2 * interSpectVec.dot(normal)) - interSpectVec).normalized();
-        Color Ir = intersectRay(scn, objects, reflection, interPoint, bounceCount, insideObj);
-        reflColor = Ir * obj.reflCo;
-        reflColor.clamp();
+    if(REFLECTION){
+        if(obj.reflCo != 0 && bounceCount >= 0){
+            Vector reflection = interSpectVec.reflect(normal);
+            Color Ir = intersectRay(scn, objects, reflection, interPoint, bounceCount);
+            reflColor = Ir * obj.reflCo;
+        }
     }
 
     //recursão de refração
-    if(obj.tranCo != 0 && bounceCount>=0){
-        float cos = interSpectVec.dot(normal);
-        Vector projVOnNormal = normal*cos;
-        Vector sinVector = interSpectVec - projVOnNormal;
-        float sinRay = sinVector.length();
-        Vector normalizedSinVector = sinVector.normalized();
+    if(REFRACTION){
+        if(obj.tranCo != 0 && bounceCount >= 0){
+            Vector refraction = interSpectVec.refract(normal, obj.refrInd);
 
-        float sinRef = ENV_REFINDEX * sinRay/obj.refrInd;
-        
-        if(insideObj)
-            sinRef = obj.refrInd * sinRay/ENV_REFINDEX;
-        
-        if(abs(sinRef) > 1)
-            sinRef = sinRef > 0 ? 1 : -1;
-
-        float cosRef = sqrt(1 - (sinRef*sinRef));
-        
-        Vector refraction = (normal*cosRef + normalizedSinVector*sinRef) * -1;
-
-        Color It = intersectRay(scn, objects, refraction, interPoint, bounceCount, 
-            (obj.hasInterior() && !insideObj)
-        );
-        tranColor = It * obj.tranCo;
-        tranColor.clamp();
+            Color It = intersectRay(scn, objects, refraction, interPoint, bounceCount);
+            tranColor = It * obj.tranCo;
+        }
     }
 
     for(Light light : scn.lights){
@@ -68,33 +54,34 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
         Color specColor;
         Vector Li = (light.center - interPoint);
         float distLight = Li.length();
+        float lightPassed = 1;
+
         Li.normalize();
 
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
         
-        float lightPassed = 1;
-
         //checa se a luz esta bloqueada por algum objeto
-        vector<Object*>::iterator iter;
-        for(iter = objects.begin(); iter != objects.end(); iter++) 
-        {
-            //ponto de interseção
-            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li);
-            
-            float dist = get<2>(inter);
+        if(SHADOWS){
+            vector<Object*>::iterator iter;
+            for(iter = objects.begin(); iter != objects.end(); iter++) 
+            {
+                //ponto de interseção
+                tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li);
+                
+                float dist = get<2>(inter);
 
-            //se dist > distLight ponto esta atras da luz
-            if(dist >= kEpsilon && dist + kEpsilon < distLight){
-                lightPassed *= (*iter)->tranCo;
+                //se dist > distLight ponto esta atras da luz
+                if(dist >= EPSILON && dist + EPSILON < distLight){
+                    lightPassed *= (*iter)->tranCo;
 
-                //se a luz está totalmente bloqueada
-                if(lightPassed <= kEpsilon)
-                    break;
+                    //se a luz está totalmente bloqueada
+                    if(lightPassed <= EPSILON)
+                        break;
+                }
             }
         }
-        
 
-        if(lightPassed > kEpsilon){
+        if(lightPassed > EPSILON){
             float RiDotV = Ri.dot(interSpectVec);
             //impede que RiDotV seja negativo
             if(RiDotV < 0)
@@ -122,7 +109,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
     return finalColor;
 }
 
-Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount, bool insideObj){
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount){
     float closestDist = numeric_limits<float>::infinity();
     tuple<Point, Vector, float> closestInter;
     Object* closestObj = NULL;
@@ -137,7 +124,7 @@ Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& ori
         float dist = get<2>(inter);
 
         //se dist < que tamanho do pixVector ponto está entre tela e foco
-        if(dist >= kEpsilon && dist < closestDist){
+        if(dist >= EPSILON && dist < closestDist){
             closestDist = dist;
             closestObj = *iter;
             closestInter = inter;
@@ -148,7 +135,7 @@ Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& ori
     Color finalColor;
 
     if(closestObj != NULL)
-        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), bounceCount, insideObj);
+        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), bounceCount);
 
     return finalColor;
 }
@@ -172,7 +159,7 @@ void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (w-1) - pixHeight * (h-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE, false);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
             pixels[h][w][0] = (int)(finalColor.R*255);
             pixels[h][w][1] = (int)(finalColor.G*255);

@@ -3,8 +3,8 @@
 #include <vector>
 #include <tuple>
 
-#define PI 3.14159265
-#define kEpsilon 0.001f
+#define PI 3.14159265f
+#define EPSILON 0.001f
 using namespace std;
 
 class Point;
@@ -16,20 +16,20 @@ class Vector{
     public:
         float x, y, z;
 
-        Vector(float x, float y, float z){
-            this->x = x;
-            this->y = y;
-            this->z = z;
+        Vector(float in_x, float in_y, float in_z){
+            x = in_x;
+            y = in_y;
+            z = in_z;
         }
-        Vector(float x){
-            this->x = x;
-            this->y = x;
-            this->z = x;
+        Vector(float in_x){
+            x = in_x;
+            y = in_x;
+            z = in_x;
         }
         Vector(){
-            this->x = 0;
-            this->y = 0;
-            this->z = 0;
+            x = 0;
+            y = 0;
+            z = 0;
         }
 
         float length(){
@@ -75,6 +75,34 @@ class Vector{
             x * vec.y - y * vec.x);
         }
 
+        Vector reflect(Vector normal){
+            return ((normal * 2 * normal.dot(*this)) - *this).normalized();
+        }
+
+        Vector refract(Vector normal, float relRefrIndex){
+            float cos = normal.dot(*this);
+            Vector projOnNormal = normal*cos;
+            Vector sinVector = *this - projOnNormal;
+            float sinRay = sinVector.length();
+            Vector normalizedSinVector = sinVector.normalized();
+
+            float sinRef;
+
+            if(cos>0)   //entrando no objeto
+                sinRef = sinRay / relRefrIndex;
+            else   //saindo saindo do objeto
+                sinRef = relRefrIndex * sinRay;
+            
+            if(abs(sinRef) > 1)
+                sinRef = sinRef > 0 ? 1 : -1;
+
+            float cosRef = sqrt(1 - (sinRef*sinRef));
+            
+            Vector refraction = (normal*cosRef + normalizedSinVector*sinRef) * -1;
+
+            return refraction;
+        }
+
         Vector operator + (const Vector &v) const
         {return Vector(x + v.x, y + v.y, z + v.z);}
 
@@ -95,7 +123,7 @@ class Vector{
         Vector operator / (const float &n) const
         {return Vector(x / n, y / n, z / n);}
 
-        const float operator [] (uint8_t i) const { return (&x)[i]; }
+        float operator [] (uint8_t i) const { return (&x)[i]; }
         float& operator [] (uint8_t i) { return (&x)[i]; }
 
         friend std::ostream& operator << (std::ostream &s, const Vector &v)
@@ -108,20 +136,20 @@ class Point{
     public:
         float x, y, z;
 
-        Point(float x, float y, float z){
-            this->x = x;
-            this->y = y;
-            this->z = z;
+        Point(float in_x, float in_y, float in_z){
+            x = in_x;
+            y = in_y;
+            z = in_z;
         }
-        Point(float x){
-            this->x = x;
-            this->y = x;
-            this->z = x;
+        Point(float in_x){
+            x = in_x;
+            y = in_x;
+            z = in_x;
         }
         Point(){
-            this->x = 0;
-            this->y = 0;
-            this->z = 0;
+            x = 0;
+            y = 0;
+            z = 0;
         }
 
         Point operator + (const Vector &v) const
@@ -139,7 +167,7 @@ class Point{
         Vector operator * (const float &n) const
         {return Vector(x * n, y * n, z * n);}
 
-        const float operator [] (uint8_t i) const { return (&x)[i]; }
+        float operator [] (uint8_t i) const { return (&x)[i]; }
         float& operator [] (uint8_t i) { return (&x)[i]; }
 
         friend std::ostream& operator << (std::ostream &s, const Point &v)
@@ -217,7 +245,7 @@ class Transform{
             // Aplica a eliminação gaussiana com pivoteamento parcial
             for (int i = 0; i < 4; i++) {
                 partialPivot(m, inverse, i);
-                double pivot = m[i][i];
+                float pivot = m[i][i];
                 // Divide a linha atual pelo pivô
                 for (int j = 0; j < 4; j++) {
                     m[i][j] /= pivot;
@@ -225,7 +253,7 @@ class Transform{
                 }
                 // Subtrai a linha atual das linhas abaixo dela
                 for (int j = i + 1; j < 4; j++) {
-                    double factor = m[j][i];
+                    float factor = m[j][i];
                     for (int k = 0; k < 4; k++) {
                         m[j][k] -= factor * m[i][k];
                         inverse[j][k] -= factor * inverse[i][k];
@@ -235,7 +263,7 @@ class Transform{
             // Aplica a eliminação gaussiana com pivoteamento parcial inverso
             for (int i = 4 - 1; i >= 0; i--) {
                 for (int j = i - 1; j >= 0; j--) {
-                    double factor = m[j][i];
+                    float factor = m[j][i];
                     for (int k = 0; k < 4; k++) {
                         m[j][k] -= factor * m[i][k];
                         inverse[j][k] -= factor * inverse[i][k];
@@ -275,7 +303,6 @@ class Transform{
 
 
 class Camera{
-    
     public:
         Point center;
         Point target;
@@ -289,14 +316,14 @@ class Camera{
         int height;
         int width;
 
-        Camera(int height, int width, float distScreen, Vector up,
-        Point center, Point target){
-            this->height = height;
-            this->width = width;
-            this->distScreen = distScreen;
-            this->up = up;
-            this->center = center;
-            this->target = target;
+        Camera(int in_height, int in_width, float in_distScreen, Vector in_up,
+        Point in_center, Point in_target){
+            height = in_height;
+            width = in_width;
+            distScreen = in_distScreen;
+            up = in_up;
+            center = in_center;
+            target = in_target;
 
             orthoU = (target - center).normalize();
             orthoV = orthoU.cross(up).normalize();
@@ -304,12 +331,12 @@ class Camera{
         }
 
         void apply(Transform& t){
-            this->center = t.apply(this->center);
-            this->target = t.apply(this->target);
-            this->up = t.apply(this->up);
-            this->orthoU = t.apply(this->orthoU);
-            this->orthoV = t.apply(this->orthoV);
-            this->orthoW = t.apply(this->orthoW);
+            center = t.apply(center);
+            target = t.apply(target);
+            up = t.apply(up);
+            orthoU = t.apply(orthoU);
+            orthoV = t.apply(orthoV);
+            orthoW = t.apply(orthoW);
         }
 };
 
@@ -317,16 +344,16 @@ class Color{
     public:
         float R, G, B;
         
-        Color(float R, float G, float B){
-            this->R = R;
-            this->G = G;
-            this->B = B;
+        Color(float in_R, float in_G, float in_B){
+            R = in_R;
+            G = in_G;
+            B = in_B;
         }
 
         Color(float C){
-            this->R = C;
-            this->G = C;
-            this->B = C;
+            R = C;
+            G = C;
+            B = C;
         }
 
         Color(){
@@ -387,9 +414,9 @@ class Light{
         Point center;
         Color color;
 
-        Light(Point center, Color color){
-            this->color = color;
-            this->center = center;
+        Light(Point in_center, Color in_color){
+            color = in_color;
+            center = in_center;
         }
 };
 
@@ -397,9 +424,9 @@ class Scene{
     public:
         Color ambient;
         vector<Light> lights = {};
-        Scene(Color ambient, vector<Light> lights){
-            this->ambient = ambient;
-            this->lights = lights;
+        Scene(Color in_ambient, vector<Light> in_lights){
+            ambient = in_ambient;
+            lights = in_lights;
         }
 };
 
@@ -414,24 +441,20 @@ class Object{
         float rugCo;
         float refrInd;
 
-        explicit Object(Color color, float difCo,
-        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd){
-            this->color = color;
-            this->difCo = difCo;
-            this->espCo = espCo;
-            this->ambCo = ambCo;
-            this->reflCo = reflCo;
-            this->tranCo = tranCo;
-            this->rugCo = rugCo;
-            this->refrInd = refrInd;
+        explicit Object(Color in_color, float in_difCo,
+        float in_espCo, float in_ambCo, float in_reflCo, float in_tranCo, float in_rugCo, float in_refrInd){
+            color = in_color;
+            difCo = in_difCo;
+            espCo = in_espCo;
+            ambCo = in_ambCo;
+            reflCo = in_reflCo;
+            tranCo = in_tranCo;
+            rugCo = in_rugCo;
+            refrInd = in_refrInd;
         }
 
         virtual void apply(Transform& t){
             
-        }
-
-        virtual const bool hasInterior(){
-            return false;
         }
 
         virtual tuple<Point, Vector, float> intersect(Point origin, Vector dir){
@@ -444,27 +467,23 @@ class Sphere: public virtual Object{
         Point center;
         float radius;
         
-        Sphere(Point center, float radius, Color color, float difCo,
-        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
-        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
-            this->center = center;
-            this->radius = radius;
-            this->color = color;
-            this->difCo = difCo;
-            this->espCo = espCo;
-            this->ambCo = ambCo;
-            this->reflCo = reflCo;
-            this->tranCo = tranCo;
-            this->rugCo = rugCo;
-            this->refrInd = refrInd;
+        Sphere(Point in_center, float in_radius, Color in_color, float in_difCo,
+        float in_espCo, float in_ambCo, float in_reflCo, float in_tranCo, float in_rugCo, float in_refrInd):
+        Object(in_color, in_difCo, in_espCo, in_ambCo, in_reflCo, in_tranCo, in_rugCo, in_refrInd){
+            center = in_center;
+            radius = in_radius;
+            color = in_color;
+            difCo = in_difCo;
+            espCo = in_espCo;
+            ambCo = in_ambCo;
+            reflCo = in_reflCo;
+            tranCo = in_tranCo;
+            rugCo = in_rugCo;
+            refrInd = in_refrInd;
         }
 
         void apply(Transform& t){
             center = t.apply(center);
-        }
-
-        const bool hasInterior(){
-            return true;
         }
 
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
@@ -506,19 +525,19 @@ class Plane: public virtual Object{
         Point point;
         Vector normal;
 
-        Plane(Point point, Vector normal, Color color, float difCo,
-        float espCo, float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
-        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
-            this->point = point;
-            this->normal = normal;
-            this->color = color;
-            this->difCo = difCo;
-            this->espCo = espCo;
-            this->ambCo = ambCo;
-            this->reflCo = reflCo;
-            this->tranCo = tranCo;
-            this->rugCo = rugCo;
-            this->refrInd = refrInd;
+        Plane(Point in_point, Vector in_normal, Color in_color, float in_difCo,
+        float in_espCo, float in_ambCo, float in_reflCo, float in_tranCo, float in_rugCo, float in_refrInd):
+        Object(in_color, in_difCo, in_espCo, in_ambCo, in_reflCo, in_tranCo, in_rugCo, in_refrInd){
+            point = in_point;
+            normal = in_normal;
+            color = in_color;
+            difCo = in_difCo;
+            espCo = in_espCo;
+            ambCo = in_ambCo;
+            reflCo = in_reflCo;
+            tranCo = in_tranCo;
+            rugCo = in_rugCo;
+            refrInd = in_refrInd;
         }
 
         void apply(Transform& t){
@@ -530,7 +549,7 @@ class Plane: public virtual Object{
             dir.normalize();
             float denom = normal.dot(dir);
 
-            if(abs(denom) > kEpsilon){
+            if(abs(denom) > EPSILON){
                 Vector v = point - origin;
                 float t = v.dot(normal) / denom;
                 if(t >= 0){
@@ -555,36 +574,36 @@ class Mesh: public Object{
         vector<Vector> triNormals;
         vector<Vector> vertNormals;
 
-        Mesh(int triCount, int vertCount, vector<Point> vertices,
-        vector<tuple<int, int, int>> triangles, Color color, float difCo, float espCo,
-        float ambCo, float reflCo, float tranCo, float rugCo, float refrInd):
-        Object(color, difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd){
-            this->triCount = triCount;
-            this->vertCount = vertCount;
-            this->vertices = vertices;
-            this->triangles = triangles;
-            this->color = color;
-            this->difCo = difCo;
-            this->espCo = espCo;
-            this->ambCo = ambCo;
-            this->reflCo = reflCo;
-            this->tranCo = tranCo;
-            this->rugCo = rugCo;
-            this->refrInd = refrInd;
+        Mesh(int in_triCount, int in_vertCount, vector<Point> in_vertices,
+        vector<tuple<int, int, int>> in_triangles, Color in_color, float in_difCo, float in_espCo,
+        float in_ambCo, float in_reflCo, float in_tranCo, float in_rugCo, float in_refrInd):
+        Object(in_color, in_difCo, in_espCo, in_ambCo, in_reflCo, in_tranCo, in_rugCo, in_refrInd){
+            triCount = in_triCount;
+            vertCount = in_vertCount;
+            vertices = in_vertices;
+            triangles = in_triangles;
+            color = in_color;
+            difCo = in_difCo;
+            espCo = in_espCo;
+            ambCo = in_ambCo;
+            reflCo = in_reflCo;
+            tranCo = in_tranCo;
+            rugCo = in_rugCo;
+            refrInd = in_refrInd;
 
             getNormals();
         }
 
         void apply(Transform& t){
-            for(int i = 0; i < this->vertices.size(); i++){
+            for(unsigned int i = 0; i < this->vertices.size(); i++){
                 this->vertices[i] = t.apply(this->vertices[i]);
             }
 
-            for(int i = 0; i < this->triNormals.size(); i++){
+            for(unsigned int i = 0; i < this->triNormals.size(); i++){
                 this->triNormals[i] = t.apply(this->triNormals[i]);
             }
 
-            for(int i = 0; i < this->vertNormals.size(); i++){
+            for(unsigned int i = 0; i < this->vertNormals.size(); i++){
                 this->vertNormals[i] = t.apply(this->vertNormals[i]);
             }
         }
@@ -631,7 +650,7 @@ class Mesh: public Object{
             float u;
             float v;
             
-            for (int i = 0; i < triangles.size(); i++){
+            for (unsigned int i = 0; i < triangles.size(); i++){
                 normal = triNormals[i];
                 triangle = triangles[i];
                 vert0 = vertices[get<0>(triangle)];
@@ -641,13 +660,13 @@ class Mesh: public Object{
                 denom = normal.dot(normal);
 
                 //checa se o raio é paralelo ao triangulo
-                if (fabs(NdotRayDir) > kEpsilon){
+                if (fabs(NdotRayDir) > EPSILON){
                     float d = -(normal.x * vert0.x + normal.y * vert0.y + normal.z * vert0.z);
                     
                     float t = -((normal.x * origin.x + normal.y * origin.y + normal.z * origin.z) + d) / NdotRayDir;
                     
-                    //se t < -kEpsilon o triangulo está atras do raio
-                    if (t < -kEpsilon*5 || t >= closestDist)
+                    //se t < -EPSILON o triangulo está atras do raio
+                    if (t < -EPSILON*5 || t >= closestDist)
                         continue;
 
                     Point interPoint = origin + dir * t;
@@ -713,7 +732,7 @@ void swap(float* row1, float* row2){
 }
 
 void partialPivot(float (*m)[4], float (*inverse)[4], int i) {
-    double maxElement = abs(m[i][i]);
+    float maxElement = abs(m[i][i]);
     int maxRow = i;
     // Encontra a linha com o maior elemento na coluna i
     for (int j = i + 1; j < 4; j++) {
