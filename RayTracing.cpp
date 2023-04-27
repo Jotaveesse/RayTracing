@@ -62,6 +62,7 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
     }
 
     for(Light light : scn.lights){
+        Color partialColor;
         Color diffColor;
         Color specColor;
         Vector Li = (light.center - interPoint);
@@ -82,13 +83,14 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
             float dist = get<2>(inter);
 
             //se dist > distLight ponto esta atras da luz
-            if(dist >= kEpsilon && dist + kEpsilon< distLight){
-                transBlock = (*iter)->tranCo;
-                break;
+            if(dist >= kEpsilon && dist + kEpsilon < distLight){
+                transBlock *= (*iter)->tranCo;
+                if(transBlock <= kEpsilon)
+                    break;
             }
         }
 
-        if(transBlock != 0){
+        if(transBlock > kEpsilon){
             float RiDotV = Ri.dot(interSpectVec);
             //impede que RiDotV seja negativo
             if(RiDotV < 0)
@@ -101,11 +103,13 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
             specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
             specColor.clamp();
             
-            finalColor = finalColor + diffColor + specColor;
-            finalColor.clamp();
+            partialColor = diffColor + specColor;
+            partialColor.clamp();
 
-            finalColor = finalColor * transBlock;
+            partialColor = partialColor * transBlock;
         }
+
+        finalColor = finalColor + partialColor;
     }
 
     finalColor = finalColor + reflColor + tranColor;
@@ -149,12 +153,6 @@ Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& ori
 void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
     vector<vector<vector<int>>> pixels(cam.height, vector<vector<int>>(cam.width, vector<int>(3, 0)));
 
-    fileName = fileName + ".ppm";
-
-    ofstream imagePpm(fileName);
-
-    imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
-
     float fov = 90;
 
     float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
@@ -167,25 +165,29 @@ void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
     Vector firstPix = cam.orthoU * cam.distScreen - cam.orthoV * gx + cam.orthoW * gy;
 
     #pragma omp parallel for
-    for(int i=0; i<cam.height;i++){
-        for(int j=0; j<cam.width;j++){
-            
+    for(int h=0; h<cam.height;h++){
+        for(int w=0; w<cam.width;w++){
             //vector que vai do foco pro pixel
-            Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
+            Vector pixVector = firstPix + pixWidth * (w-1) - pixHeight * (h-1);
 
             Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE, false);
 
-            pixels[i][j][0] = (int)(finalColor.R*255);
-            pixels[i][j][1] = (int)(finalColor.G*255);
-            pixels[i][j][2] = (int)(finalColor.B*255);
+            pixels[h][w][0] = (int)(finalColor.R*255);
+            pixels[h][w][1] = (int)(finalColor.G*255);
+            pixels[h][w][2] = (int)(finalColor.B*255);
         }
     }
 
-    for(int i=0; i<cam.height;i++){
-        for(int j=0; j<cam.width;j++){
-            imagePpm << pixels[i][j][0] << " ";
-            imagePpm << pixels[i][j][1] << " ";
-            imagePpm << pixels[i][j][2] << " ";
+    fileName = fileName + ".ppm";
+    ofstream imagePpm(fileName);
+
+    imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
+
+    for(int h=0; h<cam.height;h++){
+        for(int w=0; w<cam.width;w++){
+            imagePpm << pixels[h][w][0] << " ";
+            imagePpm << pixels[h][w][1] << " ";
+            imagePpm << pixels[h][w][2] << " ";
         }
         imagePpm << "\n";
     }
