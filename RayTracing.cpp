@@ -5,76 +5,84 @@
 #include <vector>
 #include <sstream>
 #include <tuple>
+#include <omp.h>
 #include "Objects.h"
 
-#define PI 3.14159265
-
-#define kEpsilon 0.001f
-#define MAXBOUNCE 5
-#define REFINDEX 0.6
+#define PI 3.14159265f
+#define EPSILON 0.001f
+#define MAXBOUNCE 7
+#define ENV_REFINDEX 1
+#define FOV 90
+#define SHADOWS true
+#define REFLECTION true
+#define REFRACTION true
 
 using namespace std;
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count);
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount);
 
-Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, Point specPoint, Vector normal, int count){
+Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int bounceCount){
     Color finalColor = scn.ambient * obj.ambCo;
-    Vector V = (specPoint - interPoint).normalized();
-    Color refColor;
+    Vector interSpectVec = (specPoint - interPoint).normalized();
+    Color reflColor;
     Color tranColor;
 
-    count -= 1;
+    bounceCount -= 1;
     
     //recursão de reflexão
-    if(obj.refCo != 0 && count>=0){
-        Vector reflection = ((normal * 2 * V.dot(normal)) - V).normalized();
-        Color Ir = intersectRay(scn, objects, reflection, interPoint, count);
-        refColor = Ir * obj.refCo;
-        refColor.clamp();
+    if(REFLECTION){
+        if(obj.reflCo != 0 && bounceCount >= 0){
+            Vector reflection = interSpectVec.reflect(normal);
+            Color Ir = intersectRay(scn, objects, reflection, interPoint, bounceCount);
+            reflColor = Ir * obj.reflCo;
+        }
     }
 
     //recursão de refração
-    if(obj.tranCo != 0 && count>=0){
-        float cosI = -normal.dot(V);
-        float sinT2 = REFINDEX * REFINDEX * (1.0 - cosI * cosI);
-        float cosT = sqrt(1.0 - sinT2);
-        Vector refraction = (V * REFINDEX) + normal * (REFINDEX * cosI - cosT);
+    if(REFRACTION){
+        if(obj.tranCo != 0 && bounceCount >= 0){
+            Vector refraction = interSpectVec.refract(normal, obj.refrInd);
 
-        Color It = intersectRay(scn, objects, refraction, interPoint, count);
-        tranColor = It * obj.tranCo;
-        tranColor.clamp();
+            Color It = intersectRay(scn, objects, refraction, interPoint, bounceCount);
+            tranColor = It * obj.tranCo;
+        }
     }
 
     for(Light light : scn.lights){
+        Color partialColor;
         Color diffColor;
         Color specColor;
         Vector Li = (light.center - interPoint);
         float distLight = Li.length();
+        float lightPassed = 1;
+
         Li.normalize();
 
         Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
         
-        bool blocked = false;
-
         //checa se a luz esta bloqueada por algum objeto
-        vector<Object*>::iterator iter;
-        for(iter = objects.begin(); iter != objects.end(); iter++) 
-        {
-            break;
-            //ponto de interseção
-            tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li, false);
-            
-            float dist = get<2>(inter);
+        if(SHADOWS){
+            vector<Object*>::iterator iter;
+            for(iter = objects.begin(); iter != objects.end(); iter++) 
+            {
+                //ponto de interseção
+                tuple<Point, Vector, float> inter = (*iter)->intersect(interPoint, Li);
+                
+                float dist = get<2>(inter);
 
-            //se dist > distLight ponto esta atras da luz
-            if(dist >= kEpsilon && dist + kEpsilon< distLight){
-                blocked = true;
-                break;
+                //se dist > distLight ponto esta atras da luz
+                if(dist >= EPSILON && dist + EPSILON < distLight){
+                    lightPassed *= (*iter)->tranCo;
+
+                    //se a luz está totalmente bloqueada
+                    if(lightPassed <= EPSILON)
+                        break;
+                }
             }
         }
 
-        if(!blocked){
-            float RiDotV = Ri.dot(V);
+        if(lightPassed > EPSILON){
+            float RiDotV = Ri.dot(interSpectVec);
             //impede que RiDotV seja negativo
             if(RiDotV < 0)
                 RiDotV = 0;
@@ -86,18 +94,22 @@ Color phong( vector<Object*> objects, Scene scn, Object obj, Point interPoint, P
             specColor = light.color * obj.espCo * pow(RiDotV, obj.rugCo);
             specColor.clamp();
             
-            finalColor = finalColor + diffColor + specColor;
-            finalColor.clamp();
+            partialColor = diffColor + specColor;
+            partialColor.clamp();
+
+            partialColor = partialColor * lightPassed;
         }
+
+        finalColor = finalColor + partialColor;
     }
 
-    finalColor = finalColor + refColor + tranColor;
+    finalColor = finalColor + reflColor + tranColor;
     finalColor.clamp();
     
     return finalColor;
 }
 
-Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin, int count){
+Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount){
     float closestDist = numeric_limits<float>::infinity();
     tuple<Point, Vector, float> closestInter;
     Object* closestObj = NULL;
@@ -112,7 +124,7 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
         float dist = get<2>(inter);
 
         //se dist < que tamanho do pixVector ponto está entre tela e foco
-        if(dist >= kEpsilon && dist < closestDist){
+        if(dist >= EPSILON && dist < closestDist){
             closestDist = dist;
             closestObj = *iter;
             closestInter = inter;
@@ -123,22 +135,16 @@ Color intersectRay(Scene scn, vector<Object*> objects, Vector dir, Point origin,
     Color finalColor;
 
     if(closestObj != NULL)
-        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), count);
+        finalColor = phong(objects, scn, *closestObj, get<0>(closestInter), origin, get<1>(closestInter), bounceCount);
 
     return finalColor;
 }
 
 
-void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
-    fileName = fileName + ".ppm";
+void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
+    vector<vector<vector<int>>> pixels(cam.height, vector<vector<int>>(cam.width, vector<int>(3, 0)));
 
-    ofstream imagePpm(fileName);
-
-    imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
-
-    float fov = 90;
-
-    float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
+    float gx = cam.distScreen * tan(FOV * PI / 180.0 / 2.0);
     float gy = gx * cam.height / cam.width;
 
     Vector pixWidth = (cam.orthoV * 2 * gx)/(cam.width-1);
@@ -147,17 +153,30 @@ void trace(Camera cam, Scene scn, vector<Object*> objects, string fileName){
     //pixel no canto superior esquerdo
     Vector firstPix = cam.orthoU * cam.distScreen - cam.orthoV * gx + cam.orthoW * gy;
 
-    for(int i=0; i<cam.height;i++){
-        for(int j=0; j<cam.width;j++){
-            
+    #pragma omp parallel for
+    for(int h=0; h<cam.height;h++){
+        for(int w=0; w<cam.width;w++){
             //vector que vai do foco pro pixel
-            Vector pixVector = firstPix + pixWidth * (j-1) - pixHeight * (i-1);
+            Vector pixVector = firstPix + pixWidth * (w-1) - pixHeight * (h-1);
 
             Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
 
-            imagePpm << (int)(finalColor.R*255) << " ";
-            imagePpm << (int)(finalColor.G*255) << " ";
-            imagePpm << (int)(finalColor.B*255) << " ";
+            pixels[h][w][0] = (int)(finalColor.R*255);
+            pixels[h][w][1] = (int)(finalColor.G*255);
+            pixels[h][w][2] = (int)(finalColor.B*255);
+        }
+    }
+
+    fileName = fileName + ".ppm";
+    ofstream imagePpm(fileName);
+
+    imagePpm << "P3\n"<< cam.width << " " << cam.height << "\n255\n";
+
+    for(int h=0; h<cam.height;h++){
+        for(int w=0; w<cam.width;w++){
+            imagePpm << pixels[h][w][0] << " ";
+            imagePpm << pixels[h][w][1] << " ";
+            imagePpm << pixels[h][w][2] << " ";
         }
         imagePpm << "\n";
     }
@@ -181,12 +200,13 @@ Sphere* extractSphere(vector<string> valueArr){
     float difCo = stof(valueArr[8]);
     float espCo = stof(valueArr[9]);
     float ambCo = stof(valueArr[10]);
-    float refCo = stof(valueArr[11]);
+    float reflCo = stof(valueArr[11]);
     float tranCo = stof(valueArr[12]);
     float rugCo = stof(valueArr[13]);
+    float refrInd = stof(valueArr[14]);
 
     Sphere* sph= new Sphere(center, radius, col,
-        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+        difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
 
     return sph;
 }
@@ -211,12 +231,13 @@ Plane* extractPlane(vector<string> valueArr){
     float difCo = stof(valueArr[10]);
     float espCo = stof(valueArr[11]);
     float ambCo = stof(valueArr[12]);
-    float refCo = stof(valueArr[13]);
+    float reflCo = stof(valueArr[13]);
     float tranCo = stof(valueArr[14]);
     float rugCo = stof(valueArr[15]);
+    float refrInd = stof(valueArr[16]);
 
     Plane* pln = new Plane(p, normal, col,
-        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+        difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
     
     return pln;
 }
@@ -246,12 +267,13 @@ Paraboloid* extractParaboloid(vector<string> valueArr){
     float difCo = stof(valueArr[13]);
     float espCo = stof(valueArr[14]);
     float ambCo = stof(valueArr[15]);
-    float refCo = stof(valueArr[16]);
+    float reflCo = stof(valueArr[16]);
     float tranCo = stof(valueArr[17]);
     float rugCo = stof(valueArr[18]);
+    float refrInd = stof(valueArr[19]);
 
     Paraboloid* prbl = new Paraboloid(focus, planePoint, normal, col,
-        difCo, espCo, ambCo, refCo, tranCo, rugCo);
+        difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
     
     return prbl;
 }
@@ -304,7 +326,7 @@ int main() {
 
     ifstream inputFile("input.txt");
 
-    //itera o arquivo, linha pro linha
+    //itera o arquivo, linha por linha
     while (getline(inputFile, line)) {
         valueArr.clear();
         stringstream streamLine(line);
@@ -313,6 +335,10 @@ int main() {
         while (getline(streamLine, value, ' ')) {
             valueArr.push_back(value);
         }
+        
+        //caso seja uma linha vazia
+        if(valueArr.size() == 0)
+            continue;
 
         //esfera
         if(valueArr[0] == "s"){
@@ -393,12 +419,13 @@ int main() {
             float difCo = stof(valueArr[3]);
             float espCo = stof(valueArr[4]);
             float ambCo = stof(valueArr[5]);
-            float refCo = stof(valueArr[6]);
+            float reflCo = stof(valueArr[6]);
             float tranCo = stof(valueArr[7]);
             float rugCo = stof(valueArr[8]);
+            float refrInd = stof(valueArr[9]);
 
             Mesh* mesh = new Mesh(triCount, vertCount, vertices, triangles, col,
-                difCo, espCo, ambCo, refCo, tranCo, rugCo);
+                difCo, espCo, ambCo, reflCo, tranCo, rugCo, refrInd);
 
             objectList.push_back(mesh);
         }
@@ -425,7 +452,7 @@ int main() {
 
     Vector translate(-10, 0, -10);
     TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(-40 , 'y');
+    RotationTransform rt = RotationTransform(-50 , 'y');
 
     trace(*globalCam, *globalScene, objectList, "image0");
     globalCam->apply(rt);
