@@ -7,7 +7,7 @@
 #include <tuple>
 #include <omp.h>
 #include "Objects.h"
-
+#include <bits/stdc++.h>
 #define PI 3.14159265f
 #define EPSILON 0.001f
 #define MAXBOUNCE 7
@@ -454,11 +454,19 @@ int main() {
     TranslationTransform t(translate);
     RotationTransform rt = RotationTransform(-50 , 'y');
 
+    clock_t start, end;
+    start = clock();
+ 
     trace(*globalCam, *globalScene, objectList, "image0");
     globalCam->apply(rt);
     trace(*globalCam, *globalScene, objectList, "image1");
     objectList[0]->apply(t);
     trace(*globalCam, *globalScene, objectList, "image2");
     
+    end = clock();
+    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+    cout << "Time taken by program is : " << fixed
+         << time_taken << setprecision(5);
+    cout << " sec " << endl;
     return 0;
 };

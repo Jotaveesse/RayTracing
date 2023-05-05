@@ -152,6 +152,14 @@ class Point{
             z = 0;
         }
 
+        float dist(Point p){
+            return sqrt(pow(x - p.x, 2) + pow(y - p.y, 2) + pow(z - p.z, 2));
+        }
+
+        float sqrdDist(Point p){
+            return pow(x - p.x, 2) + pow(y - p.y, 2) + pow(z - p.z, 2);
+        }
+
         Point operator + (const Vector &v) const
         {return Point(x + v.x, y + v.y, z + v.z);}
 
@@ -164,8 +172,11 @@ class Point{
         Vector operator - (const Point &v) const
         {return Vector(x - v.x, y - v.y, z - v.z);}
 
-        Vector operator * (const float &n) const
-        {return Vector(x * n, y * n, z * n);}
+        Point operator * (const float &n) const
+        {return Point(x * n, y * n, z * n);}
+
+        Point operator / (const float &n) const
+        {return Point(x / n, y / n, z / n);}
 
         float operator [] (uint8_t i) const { return (&x)[i]; }
         float& operator [] (uint8_t i) { return (&x)[i]; }
@@ -453,6 +464,9 @@ class Object{
             refrInd = in_refrInd;
         }
 
+        explicit Object(){
+        }
+
         virtual void apply(Transform& t){
             
         }
@@ -482,18 +496,22 @@ class Sphere: public virtual Object{
             refrInd = in_refrInd;
         }
 
+        Sphere():
+        Object(){
+        }
+
         void apply(Transform& t){
             center = t.apply(center);
         }
 
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             Vector L = center - origin;
-            float lengthL = L.length();
+            float lengthL = L.sqrdLength();
             dir.normalize();
             float tc = L.dot(dir);
 
             if (tc >= 0){
-                float d = sqrt(lengthL*lengthL - tc*tc);
+                float d = sqrt(lengthL - tc*tc);
 
                 if (d <= radius){
                     float tlc = sqrt(radius*radius - d*d);
@@ -647,6 +665,8 @@ class Mesh: public Object{
         vector<Vector> triNormals;
         vector<Vector> vertNormals;
 
+        Sphere boundingSphere;
+
         Mesh(int in_triCount, int in_vertCount, vector<Point> in_vertices,
         vector<tuple<int, int, int>> in_triangles, Color in_color, float in_difCo, float in_espCo,
         float in_ambCo, float in_reflCo, float in_tranCo, float in_rugCo, float in_refrInd):
@@ -665,6 +685,7 @@ class Mesh: public Object{
             refrInd = in_refrInd;
 
             getNormals();
+            getBoundingSphere();
         }
 
         void apply(Transform& t){
@@ -679,6 +700,24 @@ class Mesh: public Object{
             for(unsigned int i = 0; i < this->vertNormals.size(); i++){
                 this->vertNormals[i] = t.apply(this->vertNormals[i]);
             }
+        }
+
+        void getBoundingSphere(){
+            Point avrgVert;
+            for(int i = 0; i<vertCount;i++){
+                avrgVert.x = avrgVert.x + vertices[i].x;
+                avrgVert.y = avrgVert.y + vertices[i].y;
+                avrgVert.z = avrgVert.z + vertices[i].z;
+            }
+            boundingSphere.center = avrgVert / vertCount;
+
+            float furthestDist = 0;
+            for(int i = 0; i<vertCount;i++){
+                float dist = boundingSphere.center.sqrdDist(vertices[i]);
+                if(dist>furthestDist)
+                    furthestDist = dist;
+            }
+            boundingSphere.radius = sqrt(furthestDist);
         }
 
         void getNormals(){
@@ -710,19 +749,25 @@ class Mesh: public Object{
         }
 
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
-            float closestDist = numeric_limits<float>::infinity();
             tuple<Point, Vector, float> closestInter = {Point(), Vector(), -1};
-            
+
+            //checa se raio colide com boundingSphere
+            float boundInter = get<2>(boundingSphere.intersect(origin, dir));
+            float distOrigCenter = origin.dist(boundingSphere.center);
+            if(boundInter<0 && distOrigCenter>boundingSphere.radius)
+                return closestInter;
+
             Vector normal;
             tuple<int, int, int> triangle;
             Point vert0;
             Point vert1;
             Point vert2;
+            float closestDist = numeric_limits<float>::infinity();
             float NdotRayDir ;
             float denom;
             float u;
             float v;
-            
+
             for (unsigned int i = 0; i < triangles.size(); i++){
                 normal = triNormals[i];
                 triangle = triangles[i];
