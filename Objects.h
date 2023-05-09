@@ -42,12 +42,10 @@ class Vector{
 
         Vector normalize(){
             float len = length();
-            if(len>0){
-                float invLen = 1/len;
-                
-                x *= invLen;
-                y *= invLen;
-                z *= invLen;
+            if(len>0){                
+                x /= len;
+                y /= len;
+                z /= len;
             }
 
             return *this;
@@ -56,8 +54,7 @@ class Vector{
         Vector normalized(){
             float len = length();
             if(len>0){
-                float invLen = 1/len;
-                Vector vec(x * invLen, y * invLen, z * invLen);
+                Vector vec(x / len, y / len, z / len);
                 return vec;
             }
 
@@ -76,7 +73,7 @@ class Vector{
         }
 
         Vector reflect(Vector normal){
-            return ((normal * 2 * normal.dot(*this)) - *this).normalized();
+            return ((normal * 2 * normal.dot(*this)) - *this).normalize();
         }
 
         Vector refract(Vector normal, float relRefrIndex){
@@ -122,9 +119,6 @@ class Vector{
 
         Vector operator / (const float &n) const
         {return Vector(x / n, y / n, z / n);}
-
-        float operator [] (uint8_t i) const { return (&x)[i]; }
-        float& operator [] (uint8_t i) { return (&x)[i]; }
 
         friend std::ostream& operator << (std::ostream &s, const Vector &v)
         {
@@ -384,15 +378,15 @@ class Color{
         void clamp(){
             if(R<0)
                 R = 0;
+            else if(R>1)
+                R = 1;
             if(G<0)
                 G = 0;
+            else if(G>1)
+                G = 1;
             if(B<0)
                 B = 0;
-            if(R>1)
-                R = 1;
-            if(G>1)
-                G = 1;
-            if(B>1)
+            else if(B>1)
                 B = 1;
         }
 
@@ -594,7 +588,7 @@ class Paraboloid: public virtual Object{
         Object(in_color, in_difCo, in_espCo, in_ambCo, in_reflCo, in_tranCo, in_rugCo, in_refrInd){
             focus = in_focus;
             planePoint = in_planePoint;
-            planeNormal = in_planeNormal.normalized();
+            planeNormal = in_planeNormal.normalize();
             color = in_color;
             difCo = in_difCo;
             espCo = in_espCo;
@@ -614,41 +608,43 @@ class Paraboloid: public virtual Object{
         tuple<Point, Vector, float> intersect(Point origin, Vector dir){
             dir.normalize();
 
-            float d = - (planeNormal.x * planePoint.x + planeNormal.y * planePoint.y + planeNormal.z * planePoint.z); //dot product?
+            //definições das variaveis para o calculo
+            float d = - (planeNormal.x * planePoint.x + planeNormal.y * planePoint.y + planeNormal.z * planePoint.z);
             float r = planeNormal.sqrdLength();
-            float s = planeNormal.x * origin.x + planeNormal.y * origin.y + planeNormal.z * origin.z + d; //dot?
+            float s = planeNormal.x * origin.x + planeNormal.y * origin.y + planeNormal.z * origin.z + d;
             float t = planeNormal.x * dir.x + planeNormal.y * dir.y + planeNormal.z * dir.z;
             float u = origin.x - focus.x;
             float v = origin.y - focus.y;
             float w = origin.z - focus.z;
 
+            //a b e c  da formula de bhaskara
             float bhaskaraA = pow(t , 2) - pow(dir.x , 2) * r - pow(dir.y , 2) * r - pow(dir.z , 2) * r;
             float bhaskaraB = 2 * t * s - 2 * dir.x * u - 2 * dir.y * v - 2 * dir.z * w;
             float bhaskaraC = pow(s , 2) - pow(u , 2) * r - pow(v , 2) * r - pow(w , 2) * r;
 
             float delta = pow(bhaskaraB , 2) - 4 * bhaskaraA * bhaskaraC;
 
+            //se axiste alguma interseção
             if(delta >= 0){
                 float dist1 = (-bhaskaraB + sqrt(delta)) / (2 * bhaskaraA);
                 float dist2 = (-bhaskaraB - sqrt(delta)) / (2 * bhaskaraA);
                 
+                //se alguma das interseções está na frente da camera
                 if(dist1 > 0 || dist2 > 0){
-                    if (dist1 < dist2){
-                        Point inters = origin + (dir * dist1);
-                        Vector focusInters = inters - focus;
-                        Vector intersPlane = planeNormal.normalized() * -focusInters.length();
-                        Vector normal = (focusInters + intersPlane).normalized();
-                        
-                        return tuple<Point, Vector, float>{inters, normal, dist1};
-                    }
-                    else{
-                        Point inters = origin + (dir * dist2);
-                        Vector focusInters = inters - focus;
-                        Vector intersPlane = planeNormal.normalized() * -focusInters.length();
-                        Vector normal = (focusInters + intersPlane).normalized();
-                        
-                        return tuple<Point, Vector, float>{inters, normal, dist2};
-                    }
+                    float closestDist;
+
+                    if (dist1 < dist2)
+                        closestDist = dist1;
+                    else
+                        closestDist = dist2;
+                    
+                    Point inters = origin + (dir * closestDist);
+                    
+                    Vector focusInters = inters - focus;
+                    Vector intersPlane = planeNormal.normalize() * -focusInters.length();
+                    Vector normal = (focusInters + intersPlane).normalize();
+                    
+                    return tuple<Point, Vector, float>{inters, normal, closestDist};
                 }
             }
 
@@ -726,6 +722,7 @@ class Mesh: public Object{
             }
             
             for (tuple<int, int, int> tri : triangles){
+
                 Point triVerts[3]={vertices[get<0>(tri)],
                                 vertices[get<1>(tri)],
                                 vertices[get<2>(tri)]};
@@ -824,15 +821,15 @@ class Mesh: public Object{
                     v /= denom;
 
                     //interpola as normais dos vetores
-                    Vector hitNormal = (vNormal0 * u + vNormal1 * v + vNormal2 * (1 - u - v)).normalized(); 
+                    Vector hitNormal = (vNormal0 * u + vNormal1 * v + vNormal2 * (1 - u - v)).normalize(); 
 
-                    Vector origInter = (origin - interPoint).normalized();
-                    float cosNormalOrig = origInter.dot(normal.normalized());
+                    float cosNormalDir = dir.dot(normal.normalized());
 
-                    if(cosNormalOrig<0)
+                    if(cosNormalDir>0)
                         closestInter = {interPoint, hitNormal * -1, t};
                     else
                         closestInter = {interPoint, hitNormal, t};
+                    
                     closestDist = t;
                 }
                     

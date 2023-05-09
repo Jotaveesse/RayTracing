@@ -10,27 +10,28 @@
 #include <bits/stdc++.h>
 #define PI 3.14159265f
 #define EPSILON 0.001f
-#define MAXBOUNCE 7
-#define ENV_REFINDEX 1
-#define FOV 90
-#define SHADOWS true
-#define REFLECTION true
-#define REFRACTION true
 
 using namespace std;
+
+int maxBounce = 7;
+float envRefIndex = 1;
+float fov = 90;
+bool enabledShadows = true;
+bool enabledReflections = true;
+bool enabledRefractions = true;
 
 Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& origin, int bounceCount);
 
 Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint, Point& specPoint, Vector& normal, int bounceCount){
     Color finalColor = scn.ambient * obj.ambCo;
-    Vector interSpectVec = (specPoint - interPoint).normalized();
+    Vector interSpectVec = (specPoint - interPoint).normalize();
     Color reflColor;
     Color tranColor;
 
     bounceCount -= 1;
     
     //recursão de reflexão
-    if(REFLECTION){
+    if(enabledReflections){
         if(obj.reflCo != 0 && bounceCount >= 0){
             Vector reflection = interSpectVec.reflect(normal);
             Color Ir = intersectRay(scn, objects, reflection, interPoint, bounceCount);
@@ -39,9 +40,9 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
     }
 
     //recursão de refração
-    if(REFRACTION){
+    if(enabledRefractions){
         if(obj.tranCo != 0 && bounceCount >= 0){
-            Vector refraction = interSpectVec.refract(normal, obj.refrInd);
+            Vector refraction = interSpectVec.refract(normal, obj.refrInd/envRefIndex);
 
             Color It = intersectRay(scn, objects, refraction, interPoint, bounceCount);
             tranColor = It * obj.tranCo;
@@ -58,10 +59,10 @@ Color phong(vector<Object*>& objects, Scene& scn, Object& obj, Point& interPoint
 
         Li.normalize();
 
-        Vector Ri = (normal * 2 * Li.dot(normal)) - Li;
+        Vector Ri = ((normal * 2 * Li.dot(normal)) - Li).normalize();
         
         //checa se a luz esta bloqueada por algum objeto
-        if(SHADOWS){
+        if(enabledShadows){
             vector<Object*>::iterator iter;
             for(iter = objects.begin(); iter != objects.end(); iter++) 
             {
@@ -144,7 +145,7 @@ Color intersectRay(Scene& scn, vector<Object*>& objects, Vector& dir, Point& ori
 void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
     vector<vector<vector<int>>> pixels(cam.height, vector<vector<int>>(cam.width, vector<int>(3, 0)));
 
-    float gx = cam.distScreen * tan(FOV * PI / 180.0 / 2.0);
+    float gx = cam.distScreen * tan(fov * PI / 180.0 / 2.0);
     float gy = gx * cam.height / cam.width;
 
     Vector pixWidth = (cam.orthoV * 2 * gx)/(cam.width-1);
@@ -159,7 +160,7 @@ void trace(Camera& cam, Scene& scn, vector<Object*>& objects, string fileName){
             //vector que vai do foco pro pixel
             Vector pixVector = firstPix + pixWidth * (w-1) - pixHeight * (h-1);
 
-            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, MAXBOUNCE);
+            Color finalColor = intersectRay(scn, objects, pixVector, cam.center, maxBounce);
 
             pixels[h][w][0] = (int)(finalColor.R*255);
             pixels[h][w][1] = (int)(finalColor.G*255);
@@ -316,9 +317,10 @@ Light extractLight(vector<string> valueArr){
 int main() {
     vector<Light> lightList;
     vector<Object*> objectList;
+    string imageName;
 
-    Camera *globalCam;
-    Scene *globalScene;
+    Camera *globalCam = NULL;
+    Scene *globalScene = NULL;
 
     string value;
     vector<string> valueArr;
@@ -446,27 +448,66 @@ int main() {
 
             globalScene = new Scene(col, lightList);
         }
+        //nome da imagem
+        else if(valueArr[0] == "n"){
+            clock_t start, end;
+            start = clock();
+            
+            imageName = valueArr[1];
+            
+            if(globalScene != NULL && globalCam != NULL)
+                trace(*globalCam, *globalScene, objectList, imageName);
+
+            //reseta a cena
+            lightList.clear();
+            objectList.clear();
+            globalCam = NULL;
+            globalScene = NULL;
+
+            end = clock();
+            double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+            cout << imageName << " gerada em: " << fixed
+                << time_taken << setprecision(5);
+            cout << " segundos " << endl;
+        }
+        //configurações
+        else if(valueArr[0] == "e"){
+            enabledShadows = valueArr[1] == "1";
+            enabledReflections = valueArr[2] == "1";
+            enabledRefractions = valueArr[3] == "1";
+            fov = stof(valueArr[4]);
+            envRefIndex = stof(valueArr[5]);
+            maxBounce = stoi(valueArr[6]);
+        }
+        //rotaciona
+        else if(valueArr[0] == "r"){
+            RotationTransform rt = RotationTransform(stof(valueArr[2]) , valueArr[3][0]);
+
+            if (valueArr[1] == "c")
+                globalCam->apply(rt);
+            else
+                objectList[stoi(valueArr[1])]->apply(rt); 
+        }
+        //move
+        else if(valueArr[0] == "m"){
+            Vector transVec(stof(valueArr[2]),
+                stof(valueArr[3]),
+                stof(valueArr[4])); 
+
+            TranslationTransform t(transVec);
+
+            if (valueArr[1] == "c")
+                globalCam->apply(t);
+            else
+                objectList[stoi(valueArr[1])]->apply(t);            
+        }
     }
 
     inputFile.close();
 
-    Vector translate(-10, 0, -10);
-    TranslationTransform t(translate);
-    RotationTransform rt = RotationTransform(-50 , 'y');
+    //caso o comando n não tenha sido chamado
+    if(globalScene != NULL && globalCam != NULL)
+        trace(*globalCam, *globalScene, objectList, "imagem");
 
-    clock_t start, end;
-    start = clock();
- 
-    trace(*globalCam, *globalScene, objectList, "image0");
-    globalCam->apply(rt);
-    trace(*globalCam, *globalScene, objectList, "image1");
-    objectList[0]->apply(t);
-    trace(*globalCam, *globalScene, objectList, "image2");
-    
-    end = clock();
-    double time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-    cout << "Time taken by program is : " << fixed
-         << time_taken << setprecision(5);
-    cout << " sec " << endl;
     return 0;
 };
