@@ -1,13 +1,12 @@
-#include <iostream>
 #include <fstream>
 #include <cmath>
-#include <list>
 #include <vector>
 #include <sstream>
 #include <tuple>
 #include <omp.h>
-#include "Objects.h"
 #include <bits/stdc++.h>
+#include "Objects.h"
+
 #define PI 3.14159265f
 #define EPSILON 0.001f
 
